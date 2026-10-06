@@ -1,0 +1,133 @@
+{
+  "version": "kronos-1",
+  "aviso": "Ejemplo ilustrativo con datos ficticios. No corresponde a una empresa real; sirve únicamente para mostrar cómo se reutiliza KRONOS en otro tipo de negocio.",
+  "negocio": {
+    "nombre": "Panadería El Buen Pan (ejemplo ilustrativo)",
+    "propietario": "Caso de demostración — datos ficticios",
+    "ubicacion": "Montería, Córdoba",
+    "actividad": "Panadería",
+    "clientesActuales": 3000,
+    "ingresosActuales": 9000000,
+    "diasOperacion": 30,
+    "estacionesActuales": 1,
+    "trabajadoresActuales": 3
+  },
+  "servicios": [
+    {
+      "id": "s-pan-1",
+      "nombre": "Pan francés (unidad)",
+      "precio": 1000
+    },
+    {
+      "id": "s-pan-2",
+      "nombre": "Pan de queso",
+      "precio": 2000
+    },
+    {
+      "id": "s-pan-3",
+      "nombre": "Buñuelo",
+      "precio": 1500
+    },
+    {
+      "id": "s-pan-4",
+      "nombre": "Torta por porción",
+      "precio": 4000
+    },
+    {
+      "id": "s-pan-5",
+      "nombre": "Bebida fría",
+      "precio": 3000
+    }
+  ],
+  "inversion": {
+    "descripcion": "Compra e instalación de un horno rotatorio industrial",
+    "estacionesNuevas": 1,
+    "elementos": [
+      {
+        "id": "i-pan-1",
+        "elemento": "Horno rotatorio industrial",
+        "cantidad": 1,
+        "precioUnitario": 12000000
+      },
+      {
+        "id": "i-pan-2",
+        "elemento": "Instalación eléctrica y de gas",
+        "cantidad": 1,
+        "precioUnitario": 2500000
+      },
+      {
+        "id": "i-pan-3",
+        "elemento": "Mesa de trabajo en acero",
+        "cantidad": 1,
+        "precioUnitario": 1200000
+      },
+      {
+        "id": "i-pan-4",
+        "elemento": "Carro portabandejas",
+        "cantidad": 1,
+        "precioUnitario": 700000
+      },
+      {
+        "id": "i-pan-5",
+        "elemento": "Bandejas y moldes",
+        "cantidad": 1,
+        "precioUnitario": 800000
+      }
+    ]
+  },
+  "personal": {
+    "nuevosTrabajadores": 1,
+    "salarioMensual": 1500000,
+    "porcentajePrestaciones": 30,
+    "otrosCostosFijos": [
+      {
+        "id": "c-pan-1",
+        "concepto": "Gas adicional",
+        "valorMensual": 250000
+      },
+      {
+        "id": "c-pan-2",
+        "concepto": "Electricidad adicional",
+        "valorMensual": 180000
+      }
+    ],
+    "gastoInsumos": 3600000
+  },
+  "proyeccion": [
+    600,
+    900,
+    1200,
+    1500,
+    1800,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000
+  ],
+  "parametros": {
+    "vidaUtil": 10,
+    "tasaEvaluacion": 20,
+    "crecimientoAnual": 4,
+    "valorSalvamento": 1720000
+  },
+  "escenarios": [
+    {
+      "id": "e-pan-a",
+      "nombre": "A — Conservador",
+      "clientes": 1200
+    },
+    {
+      "id": "e-pan-b",
+      "nombre": "B — Esperado",
+      "clientes": 2000
+    },
+    {
+      "id": "e-pan-c",
+      "nombre": "C — Expansión",
+      "clientes": 2600
+    }
+  ]
+}

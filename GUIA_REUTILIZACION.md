@@ -107,7 +107,9 @@ quiera y recupérelo después con **Abrir caso**, en este o en cualquier otro co
 ## 3. Caso de ejemplo incluido
 
 El botón **Caso de ejemplo** del encabezado carga un segundo caso completo: una **panadería que
-compra un horno rotatorio industrial**.
+compra un horno rotatorio industrial**. El mismo caso está en la carpeta `ejemplos/` como archivo
+`.json`, junto con el caso real de Espitia, por si prefiere cargarlo con **Abrir caso** o llevarlo
+en una memoria USB.
 
 > ⚠️ **Los datos de ese caso son ficticios.** No corresponden a ninguna empresa real y no deben
 > citarse como evidencia en ningún documento. Existe únicamente para mostrar que la herramienta

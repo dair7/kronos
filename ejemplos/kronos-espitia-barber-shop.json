@@ -1,0 +1,162 @@
+{
+  "version": "kronos-1",
+  "negocio": {
+    "nombre": "Espitia Barber Shop",
+    "propietario": "Álvaro Espitia",
+    "ubicacion": "San Pelayo, Córdoba",
+    "actividad": "Barbería",
+    "clientesActuales": 600,
+    "ingresosActuales": 11000000,
+    "diasOperacion": 25,
+    "estacionesActuales": 1,
+    "trabajadoresActuales": 2
+  },
+  "servicios": [
+    {
+      "id": "s-esp-1",
+      "nombre": "Corte de cabello",
+      "precio": 15000
+    },
+    {
+      "id": "s-esp-2",
+      "nombre": "Corte + barba",
+      "precio": 25000
+    },
+    {
+      "id": "s-esp-3",
+      "nombre": "Arreglo de barba",
+      "precio": 10000
+    },
+    {
+      "id": "s-esp-4",
+      "nombre": "Corte infantil",
+      "precio": 10000
+    },
+    {
+      "id": "s-esp-5",
+      "nombre": "Diseño",
+      "precio": 20000
+    }
+  ],
+  "inversion": {
+    "descripcion": "Instalación de una segunda estación de trabajo",
+    "estacionesNuevas": 1,
+    "elementos": [
+      {
+        "id": "i-esp-1",
+        "elemento": "Silla",
+        "cantidad": 1,
+        "precioUnitario": 600000
+      },
+      {
+        "id": "i-esp-2",
+        "elemento": "Espejo",
+        "cantidad": 1,
+        "precioUnitario": 150000
+      },
+      {
+        "id": "i-esp-3",
+        "elemento": "Mobiliario",
+        "cantidad": 1,
+        "precioUnitario": 500000
+      },
+      {
+        "id": "i-esp-4",
+        "elemento": "Máquina de corte",
+        "cantidad": 1,
+        "precioUnitario": 300000
+      },
+      {
+        "id": "i-esp-5",
+        "elemento": "Máquina de acabado",
+        "cantidad": 1,
+        "precioUnitario": 120000
+      },
+      {
+        "id": "i-esp-6",
+        "elemento": "Secador",
+        "cantidad": 1,
+        "precioUnitario": 280000
+      },
+      {
+        "id": "i-esp-7",
+        "elemento": "Iluminación",
+        "cantidad": 1,
+        "precioUnitario": 250000
+      },
+      {
+        "id": "i-esp-8",
+        "elemento": "Aire acondicionado / ventilación",
+        "cantidad": 1,
+        "precioUnitario": 1400000
+      },
+      {
+        "id": "i-esp-9",
+        "elemento": "Adecuación del espacio",
+        "cantidad": 1,
+        "precioUnitario": 1700000
+      },
+      {
+        "id": "i-esp-10",
+        "elemento": "Instalación",
+        "cantidad": 1,
+        "precioUnitario": 3000000
+      }
+    ]
+  },
+  "personal": {
+    "nuevosTrabajadores": 2,
+    "salarioMensual": 1700000,
+    "porcentajePrestaciones": 30,
+    "otrosCostosFijos": [
+      {
+        "id": "c-esp-1",
+        "concepto": "Electricidad adicional",
+        "valorMensual": 100000
+      },
+      {
+        "id": "c-esp-2",
+        "concepto": "Agua adicional",
+        "valorMensual": 30000
+      }
+    ],
+    "gastoInsumos": 850000
+  },
+  "proyeccion": [
+    150,
+    200,
+    250,
+    300,
+    350,
+    400,
+    400,
+    400,
+    400,
+    400,
+    400,
+    400
+  ],
+  "parametros": {
+    "vidaUtil": 10,
+    "tasaEvaluacion": 20,
+    "crecimientoAnual": 4,
+    "valorSalvamento": 830000
+  },
+  "escenarios": [
+    {
+      "id": "e-esp-a",
+      "nombre": "A — Conservador",
+      "clientes": 250
+    },
+    {
+      "id": "e-esp-b",
+      "nombre": "B — Esperado",
+      "clientes": 400
+    },
+    {
+      "id": "e-esp-c",
+      "nombre": "C — Expansión",
+      "clientes": 500
+    }
+  ]
+}

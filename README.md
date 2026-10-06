@@ -83,6 +83,7 @@ archivo, lo que hace la herramienta portable y gratuita de desplegar.
 │       └── resultados/          Dashboard
 ├── tests/
 │   └── validacion-espitia.test.ts
+├── ejemplos/                    Casos .json listos para abrir
 └── capturas/                    Imágenes del manual de usuario
 ```
 
