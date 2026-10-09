@@ -34,7 +34,7 @@ de imagen sin meta de clientes) o proyectos donde el ingreso no crece con el vol
 
 ### Paso 1 · Crear el caso nuevo
 
-En el encabezado, pulse **Nuevo caso** y confirme. Queda un formulario en blanco con la misma
+En el menú lateral, pulse **Más → Nuevo caso** y confirme. Queda un formulario en blanco con la misma
 estructura del caso real.
 
 ### Paso 2 · Datos del negocio
@@ -106,7 +106,7 @@ quiera y recupérelo después con **Abrir caso**, en este o en cualquier otro co
 
 ## 3. Caso de ejemplo incluido
 
-El botón **Caso de ejemplo** del encabezado carga un segundo caso completo: una **panadería que
+La opción **Más → Caso de ejemplo** del menú lateral carga un segundo caso completo: una **panadería que
 compra un horno rotatorio industrial**. El mismo caso está en la carpeta `ejemplos/` como archivo
 `.json`, junto con el caso real de Espitia, por si prefiere cargarlo con **Abrir caso** o llevarlo
 en una memoria USB.
@@ -160,7 +160,7 @@ Para un curso de Ingeniería Económica, KRONOS funciona bien como herramienta d
 2. Cada estudiante lo abre con **Abrir caso** y modifica una variable: la tasa, el crecimiento, el
    salario, la proyección.
 3. Comparan qué le pasa al VPN, a la TIR y al punto de equilibrio.
-4. La pestaña **Comparar escenarios** permite discutir tres alternativas con las mismas cifras a la
+4. La pestaña **Escenarios** permite discutir tres alternativas con las mismas cifras a la
    vista, sin que el software sugiera cuál es «la correcta».
 
 La tarjeta **«Supuestos del escenario»** del dashboard hace explícito cada parámetro, lo que facilita

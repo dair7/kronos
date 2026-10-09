@@ -1,115 +1,131 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useCaso } from "../ProveedorCaso";
 import { CeldaNumero, CeldaTexto } from "../ui/Campo";
 import { Aviso, EstadoVacio } from "../ui/Aviso";
 import { Boton } from "../ui/Boton";
+import { DisenoPantalla } from "../ui/DisenoPantalla";
+import { IconoAgregar } from "../ui/Iconos";
+import { ResumenEnVivo } from "../ui/ResumenEnVivo";
 import {
-  BotonEliminar,
+  CeldaEliminar,
   CeldaTabla,
   ContenedorTabla,
   EncabezadoTabla,
   FilaTabla,
 } from "../ui/TablaEditable";
 import { nuevoId } from "@/lib/datos";
+import { serviciosValidos } from "../estadoPasos";
 import { derivados } from "@/lib/calculos";
-import { pesos, pesosDecimales } from "@/lib/formato";
+import { numero, pesos } from "@/lib/formato";
 
-const PLANTILLA = "md:grid-cols-[1fr_12rem_3.5rem]";
+const PLANTILLA = "md:grid-cols-[1fr_12rem_3rem]";
 
-export function PantallaServicios() {
+export function PantallaServicios({ pie }: { pie: ReactNode }) {
   const { caso, actualizar } = useCaso();
   const { servicios } = caso;
   const d = derivados(caso);
 
-  const conPrecio = servicios.filter((s) => typeof s.precio === "number" && s.precio > 0);
+  // Las filas vacias no cuentan: solo servicios con nombre y precio.
+  const validos = serviciosValidos(caso);
+  const conPrecio = validos.filter((s) => (s.precio as number) > 0);
   const promedioLista =
     conPrecio.length > 0
       ? conPrecio.reduce((suma, s) => suma + (s.precio as number), 0) / conPrecio.length
       : null;
 
   return (
-    <div className="space-y-5">
-      <Aviso tono="info" titulo="Este catálogo no cambia ningún cálculo">
-        <p>
-          Los servicios y sus precios quedan registrados como información del caso y aparecen entre
-          los supuestos del dashboard, pero <strong>no entran en ninguna fórmula</strong>.
-        </p>
-        <p className="mt-2">
-          El <strong>ingreso promedio por cliente</strong> se calcula dividiendo los ingresos reales
-          del mes entre los clientes del mes, no promediando esta lista de precios. Se hace así
-          porque los ingresos reales ya reflejan la mezcla verdadera de servicios que pide la
-          clientela —y además incluyen servicios combinados y venta de productos—, mientras que un
-          promedio de la lista supondría que todos los servicios se venden en la misma proporción.
-        </p>
-      </Aviso>
+    <DisenoPantalla
+      pie={pie}
+      formulario={
+        <div className="space-y-5">
+          <ContenedorTabla>
+            <EncabezadoTabla
+              plantilla={PLANTILLA}
+              columnas={[
+                { titulo: "Servicio" },
+                { titulo: "Precio", alineacion: "derecha" },
+                { titulo: "", alineacion: "centro" },
+              ]}
+            />
 
-      <ContenedorTabla>
-        <EncabezadoTabla
-          plantilla={PLANTILLA}
-          columnas={[
-            { titulo: "Servicio" },
-            { titulo: "Precio ($)", alineacion: "derecha" },
-            { titulo: "", alineacion: "centro" },
-          ]}
-        />
+            {servicios.length === 0 ? (
+              <EstadoVacio titulo="Todavía no hay servicios registrados.">
+                Use «Agregar servicio» para describir qué vende el negocio. Este paso es opcional.
+              </EstadoVacio>
+            ) : (
+              servicios.map((servicio, indice) => (
+                <FilaTabla key={servicio.id} plantilla={PLANTILLA}>
+                  <CeldaTabla etiqueta="Servicio" className="pr-11 md:pr-0">
+                    <CeldaTexto
+                      etiquetaAccesible={`Nombre del servicio ${indice + 1}`}
+                      valor={servicio.nombre}
+                      placeholder="Ej.: Pan tajado"
+                      onChange={(v) => actualizar((c) => void (c.servicios[indice].nombre = v))}
+                    />
+                  </CeldaTabla>
+                  <CeldaTabla etiqueta="Precio">
+                    <CeldaNumero
+                      etiquetaAccesible={`Precio del servicio ${indice + 1}, en pesos`}
+                      valor={servicio.precio}
+                      min={0}
+                      unidad="$"
+                      placeholder="Ej.: 5.000"
+                      onChange={(v) => actualizar((c) => void (c.servicios[indice].precio = v))}
+                    />
+                  </CeldaTabla>
+                    <CeldaEliminar
+                      etiquetaAccesible={`Eliminar el servicio ${servicio.nombre || indice + 1}`}
+                      onClick={() => actualizar((c) => void c.servicios.splice(indice, 1))}
+                    />
+                </FilaTabla>
+              ))
+            )}
+          </ContenedorTabla>
 
-        {servicios.length === 0 ? (
-          <EstadoVacio titulo="Todavía no hay servicios registrados.">
-            Use el botón «Agregar servicio» para describir qué vende el negocio. Este paso es
-            opcional.
-          </EstadoVacio>
-        ) : (
-          servicios.map((servicio, indice) => (
-            <FilaTabla key={servicio.id} plantilla={PLANTILLA}>
-              <CeldaTabla etiqueta="Servicio">
-                <CeldaTexto
-                  etiquetaAccesible={`Nombre del servicio ${indice + 1}`}
-                  valor={servicio.nombre}
-                  placeholder="Corte de cabello"
-                  onChange={(v) => actualizar((c) => void (c.servicios[indice].nombre = v))}
-                />
-              </CeldaTabla>
-              <CeldaTabla etiqueta="Precio ($)">
-                <CeldaNumero
-                  etiquetaAccesible={`Precio del servicio ${indice + 1}`}
-                  valor={servicio.precio}
-                  min={0}
-                  onChange={(v) => actualizar((c) => void (c.servicios[indice].precio = v))}
-                />
-              </CeldaTabla>
-              <CeldaTabla etiqueta="Acción" alineacion="centro">
-                <BotonEliminar
-                  etiquetaAccesible={`Eliminar el servicio ${servicio.nombre || indice + 1}`}
-                  onClick={() => actualizar((c) => void c.servicios.splice(indice, 1))}
-                />
-              </CeldaTabla>
-            </FilaTabla>
-          ))
-        )}
-      </ContenedorTabla>
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Boton
-          variante="secundario"
-          onClick={() =>
-            actualizar((c) => void c.servicios.push({ id: nuevoId("s"), nombre: "", precio: null }))
-          }
-        >
-          + Agregar servicio
-        </Boton>
-
-        {promedioLista !== null && (
-          <p className="text-xs text-marino-500">
-            Promedio simple de la lista:{" "}
-            <span className="cifra font-medium text-marino-700">{pesos(promedioLista)}</span> ·
-            Ingreso promedio real por cliente:{" "}
-            <span className="cifra font-medium text-marino-700">
-              {pesosDecimales(d.ingresoPromedio)}
-            </span>
-          </p>
-        )}
-      </div>
-    </div>
+          <Boton
+            variante="secundario"
+            onClick={() =>
+              actualizar((c) =>
+                void c.servicios.push({ id: nuevoId("s"), nombre: "", precio: null }),
+              )
+            }
+          >
+            <IconoAgregar tamano={16} />
+            Agregar servicio
+          </Boton>
+        </div>
+      }
+      calculados={
+        <>
+          <ResumenEnVivo
+            heroe={{
+              etiqueta: "Ingreso promedio real por cliente",
+              valor: pesos(d.ingresoPromedio),
+              faltante:
+                d.ingresoPromedio > 0 ? undefined : "Faltan los datos del paso Negocio",
+            }}
+            lineas={[
+              {
+                etiqueta: "Promedio simple de la lista",
+                valor: pesos(promedioLista),
+                faltante: promedioLista === null ? "Sin precios registrados" : undefined,
+              },
+              {
+                etiqueta: "Servicios registrados",
+                valor: numero(validos.length),
+                faltante: validos.length === 0 ? "Ninguno todavía (paso opcional)" : undefined,
+              },
+            ]}
+          />
+          <Aviso tono="info" titulo="Este catálogo no cambia ningún cálculo">
+            El ingreso promedio por cliente sale de los ingresos reales del mes, que ya reflejan la
+            mezcla verdadera de servicios, combos y venta de productos. Promediar esta lista
+            supondría que todo se vende en la misma proporción.
+          </Aviso>
+        </>
+      }
+    />
   );
 }

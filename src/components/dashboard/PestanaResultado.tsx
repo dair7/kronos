@@ -1,123 +1,117 @@
 "use client";
 
-import { Kpi, RejillaKpi } from "../ui/Kpi";
-import { Boton } from "../ui/Boton";
+import { Tarjeta } from "../ui/Tarjeta";
 import { Interpretacion } from "./Interpretacion";
-import { Supuestos } from "./Supuestos";
+import { LecturaRapida } from "./LecturaRapida";
 import { TablaFlujo } from "./TablaFlujo";
 import {
-  GraficaClientes,
+  IndicadorEquilibrio,
+  IndicadorRecuperacion,
+  IndicadorTir,
+  TarjetaHeroeVpn,
+} from "./Indicadores";
+import {
+  COLORES,
   GraficaFlujoAnual,
   GraficaIngresosCostos,
   GraficaRecuperacion,
+  Leyenda,
 } from "./Graficas";
 import { interpretar, type Resultado } from "@/lib/calculos";
 import type { Caso } from "@/lib/datos";
-import { meses, mesDeRecuperacion, numero, pesos, porcentaje } from "@/lib/formato";
 
+/**
+ * Pestana "Resultado". Cuadricula de 12 columnas desde 1280 px:
+ * - fila 1: VPN (5) + tres indicadores con mini grafica (7)
+ * - fila 2: recuperacion de la inversion (8) + lectura rapida (4)
+ *   (estas dos filas caben en 1366 x 768 sin scroll)
+ * - fila 3: flujo por anio (6) + ingresos vs. costos (6)
+ * - fila 4: tabla de flujo descontado (12)
+ * - fila 5: interpretacion completa (12): texto en 2/3 y supuestos en 1/3
+ * Entre 768 y 1279 px las filas pasan a 2 columnas; en celular, a una sola.
+ */
 export function PestanaResultado({ caso, resultado }: { caso: Caso; resultado: Resultado }) {
-  const d = resultado.derivados;
   const tasa = caso.parametros.tasaEvaluacion ?? 0;
   const interpretacion = interpretar(caso, resultado);
 
-  const tirTexto = resultado.tir === null ? "No existe" : porcentaje(resultado.tir * 100);
-  const tirNota =
-    resultado.tir === null
-      ? "Los flujos no cambian de signo"
-      : `frente a una TMAR de ${porcentaje(tasa)}`;
-
-  const notaRecuperacion = mesDeRecuperacion(resultado.recuperacionMeses);
-
   return (
-    <div className="space-y-6">
-      {/* Encabezado que solo aparece en el PDF impreso */}
-      <div className="solo-impresion border-b border-marino-800 pb-3">
-        <p className="text-lg font-bold">KRONOS — Evaluación económica</p>
-        <p className="text-sm">
-          {caso.negocio.nombre}
-          {caso.negocio.ubicacion ? ` · ${caso.negocio.ubicacion}` : ""}
-          {caso.inversion.descripcion ? ` · ${caso.inversion.descripcion}` : ""}
-        </p>
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12">
+      {/* Fila 1 */}
+      <TarjetaHeroeVpn caso={caso} resultado={resultado} className="md:col-span-2 xl:col-span-5" />
+
+      {/* En celular los indicadores se deslizan en horizontal */}
+      <div className="sin-barra -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 md:col-span-2 xl:col-span-7">
+        <IndicadorTir caso={caso} resultado={resultado} className="w-[72%] shrink-0 snap-start sm:w-auto" />
+        <IndicadorRecuperacion resultado={resultado} className="w-[72%] shrink-0 snap-start sm:w-auto" />
+        <IndicadorEquilibrio resultado={resultado} className="w-[72%] shrink-0 snap-start sm:w-auto" />
       </div>
 
-      <RejillaKpi>
-        <Kpi
-          etiqueta="Inversión inicial"
-          unidad="($)"
-          valor={pesos(d.inversionTotal)}
-          nota={caso.inversion.descripcion || undefined}
-          tono="acento"
-        />
-        <Kpi
-          etiqueta="VPN"
-          unidad="($ de hoy)"
-          valor={pesos(resultado.vpn)}
-          nota={resultado.vpn >= 0 ? "Supera la tasa exigida" : "No alcanza la tasa exigida"}
-          tono={resultado.vpn >= 0 ? "favorable" : "desfavorable"}
-        />
-        <Kpi
-          etiqueta="TIR"
-          unidad="(% anual)"
-          valor={tirTexto}
-          nota={tirNota}
-          tono={
-            resultado.tir === null
-              ? "desfavorable"
-              : resultado.tir * 100 >= tasa
-                ? "favorable"
-                : "desfavorable"
-          }
-        />
-        <Kpi
-          etiqueta="Recuperación"
-          unidad="(meses)"
-          valor={meses(resultado.recuperacionMeses)}
-          nota={notaRecuperacion ?? "No se alcanza en el horizonte"}
-          tono={resultado.recuperacionMeses === null ? "desfavorable" : "neutro"}
-        />
-        <Kpi
-          etiqueta="Punto de equilibrio"
-          unidad="(clientes/mes)"
-          valor={
-            d.puntoEquilibrio === null ? "No aplica" : `${numero(d.puntoEquilibrio)} clientes`
-          }
-          nota={`proyección máxima: ${numero(d.proyeccionMaxima)} clientes/mes`}
-          tono={
-            d.puntoEquilibrio !== null && d.proyeccionMaxima >= d.puntoEquilibrio
-              ? "favorable"
-              : "desfavorable"
-          }
-        />
-        <Kpi
-          etiqueta="Flujo neto año 1"
-          unidad="($)"
-          valor={pesos(resultado.flujoAnio1)}
-          nota={`${numero(d.clientesAnio1)} clientes adicionales en el año`}
-          tono={resultado.flujoAnio1 >= 0 ? "favorable" : "desfavorable"}
-        />
-      </RejillaKpi>
+      {/* Fila 2 */}
+      <Tarjeta
+        titulo="Recuperación de la inversión"
+        descripcion="Saldo acumulado del proyecto, mes a mes, desde la inversión"
+        acciones={
+          <Leyenda
+            items={[
+              { nombre: "Por recuperar", muestra: "linea", color: COLORES.negativo },
+              { nombre: "Recuperado", muestra: "linea", color: COLORES.positivo },
+            ]}
+          />
+        }
+        className="md:col-span-2 xl:col-span-8"
+      >
+        <div className="h-64 xl:h-[268px]">
+          <GraficaRecuperacion resultado={resultado} />
+        </div>
+      </Tarjeta>
 
-      <Interpretacion interpretacion={interpretacion} />
+      <LecturaRapida caso={caso} resultado={resultado} className="md:col-span-2 xl:col-span-4" />
 
-      <Supuestos caso={caso} resultado={resultado} />
+      {/* Fila 3 */}
+      <Tarjeta
+        titulo="Flujo de caja por año"
+        descripcion="El año 0 es la inversión; el último incluye el salvamento"
+        acciones={
+          <Leyenda
+            items={[
+              { nombre: "Inversión", muestra: "barra", color: COLORES.negativo },
+              { nombre: "Flujo neto", muestra: "rayado" },
+            ]}
+          />
+        }
+        className="xl:col-span-6"
+      >
+        <div className="h-64">
+          <GraficaFlujoAnual resultado={resultado} />
+        </div>
+      </Tarjeta>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <GraficaIngresosCostos resultado={resultado} />
-        <GraficaFlujoAnual resultado={resultado} />
-        <GraficaClientes
-          clientesActuales={caso.negocio.clientesActuales ?? 0}
-          proyeccion={caso.proyeccion.map((c) => c ?? 0)}
-        />
-        <GraficaRecuperacion resultado={resultado} />
-      </div>
+      <Tarjeta
+        titulo="Ingresos vs. costos, año 1"
+        descripcion="Lo que entra y lo que sale cada mes por la ampliación"
+        acciones={
+          <Leyenda
+            items={[
+              { nombre: "Ingresos", muestra: "linea", color: COLORES.positivo },
+              { nombre: "Costos", muestra: "linea", color: COLORES.contextoOscuro },
+            ]}
+          />
+        }
+        className="xl:col-span-6"
+      >
+        <div className="h-64">
+          <GraficaIngresosCostos resultado={resultado} />
+        </div>
+      </Tarjeta>
 
-      <TablaFlujo resultado={resultado} tasa={tasa} />
-
-      <div className="sin-impresion flex justify-end">
-        <Boton variante="secundario" onClick={() => window.print()}>
-          Imprimir o guardar en PDF
-        </Boton>
-      </div>
+      {/* Fila 4 y 5: a ancho completo, para que abrir "Ver mas" nunca deje huecos */}
+      <TablaFlujo resultado={resultado} tasa={tasa} className="md:col-span-2 xl:col-span-12" />
+      <Interpretacion
+        interpretacion={interpretacion}
+        caso={caso}
+        resultado={resultado}
+        className="md:col-span-2 xl:col-span-12"
+      />
     </div>
   );
 }

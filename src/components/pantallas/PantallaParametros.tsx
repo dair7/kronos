@@ -1,91 +1,126 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useCaso } from "../ProveedorCaso";
 import { CampoNumero } from "../ui/Campo";
-import { Tarjeta } from "../ui/Tarjeta";
+import { DisenoPantalla } from "../ui/DisenoPantalla";
+import { ResumenEnVivo } from "../ui/ResumenEnVivo";
+import { evaluar, validar } from "@/lib/calculos";
+import { meses, pesos, porcentaje } from "@/lib/formato";
 
-export function PantallaParametros() {
+const METODO = [
+  ["Flujo mensual", "Cada mes del año 1 aporta clientes × margen − costos fijos."],
+  [
+    "Flujo anual",
+    "El año 0 es la inversión, en negativo. El año 1 suma sus 12 meses; cada año siguiente aplica el crecimiento y el último suma el salvamento.",
+  ],
+  ["VPN", "Cada flujo se divide entre (1 + tasa)^año y se suman todos."],
+  ["TIR", "La tasa que hace el VPN exactamente cero, hallada por bisección."],
+  ["Recuperación", "Se acumulan los flujos mes a mes hasta igualar la inversión."],
+  ["Punto de equilibrio", "Costos fijos ÷ margen por cliente, redondeado hacia arriba."],
+] as const;
+
+export function PantallaParametros({ pie }: { pie: ReactNode }) {
   const { caso, actualizar } = useCaso();
   const { parametros } = caso;
 
-  return (
-    <div className="grid gap-6 lg:grid-cols-3">
-      <div className="grid gap-4 sm:grid-cols-2 lg:col-span-2 lg:content-start">
-        <CampoNumero
-          etiqueta="Periodo de evaluación"
-          unidad="(años)"
-          requerido
-          min={1}
-          paso={1}
-          valor={parametros.vidaUtil}
-          ayuda="Durante cuántos años se va a analizar el proyecto. Suele coincidir con la vida útil de lo que se compra. Debe ser un número entero entre 1 y 50."
-          onChange={(v) => actualizar((c) => void (c.parametros.vidaUtil = v))}
-        />
-        <CampoNumero
-          etiqueta="Tasa de evaluación (TMAR)"
-          unidad="(% anual)"
-          requerido
-          min={0}
-          paso={0.1}
-          valor={parametros.tasaEvaluacion}
-          ayuda="Rentabilidad mínima que el dueño exige a su dinero para que valga la pena invertirlo aquí en vez de en otra alternativa. Con ella se traen los flujos futuros a pesos de hoy."
-          onChange={(v) => actualizar((c) => void (c.parametros.tasaEvaluacion = v))}
-        />
-        <CampoNumero
-          etiqueta="Crecimiento anual"
-          unidad="(% anual)"
-          requerido
-          paso={0.1}
-          valor={parametros.crecimientoAnual}
-          ayuda="Cuánto se espera que crezca cada año el flujo del proyecto respecto al año anterior. Puede ser 0 % si se prefiere un escenario plano."
-          onChange={(v) => actualizar((c) => void (c.parametros.crecimientoAnual = v))}
-        />
-        <CampoNumero
-          etiqueta="Valor de salvamento"
-          unidad="($)"
-          min={0}
-          valor={parametros.valorSalvamento}
-          ayuda="Lo que se podría recuperar vendiendo los equipos al terminar el periodo evaluado. Se suma al flujo del último año."
-          onChange={(v) => actualizar((c) => void (c.parametros.valorSalvamento = v))}
-        />
-      </div>
+  // Con el caso completo, la tarjeta en vivo muestra el VPN que resulta de los
+  // parametros que se estan escribiendo.
+  const completo = validar(caso).length === 0;
+  const resultado = completo ? evaluar(caso) : null;
 
-      <Tarjeta titulo="Cómo se calcula" className="lg:col-span-1">
-        <ol className="space-y-3 text-sm leading-relaxed text-marino-600">
-          <li>
-            <span className="font-medium text-marino-800">1. Flujo mensual.</span> Cada mes del año
-            1 aporta: clientes del mes × margen por cliente − costos fijos mensuales.
-          </li>
-          <li>
-            <span className="font-medium text-marino-800">2. Flujo anual.</span> El año 0 es la
-            inversión con signo negativo. El año 1 es la suma de sus 12 meses. Cada año siguiente es
-            el año 1 multiplicado por el crecimiento acumulado, y al último se le suma el valor de
-            salvamento.
-          </li>
-          <li>
-            <span className="font-medium text-marino-800">3. VPN.</span> Cada flujo se divide entre
-            (1 + tasa) elevado al año que le corresponde y se suman todos. Si el total es mayor que
-            cero, el proyecto rinde más que la tasa exigida.
-          </li>
-          <li>
-            <span className="font-medium text-marino-800">4. TIR.</span> Es la tasa que haría que el
-            VPN fuera exactamente cero. Se halla por aproximaciones sucesivas (bisección).
-          </li>
-          <li>
-            <span className="font-medium text-marino-800">5. Recuperación.</span> Se acumulan los
-            flujos mes a mes hasta igualar la inversión, interpolando la fracción del último mes.
-          </li>
-          <li>
-            <span className="font-medium text-marino-800">6. Punto de equilibrio.</span> Costos
-            fijos mensuales ÷ margen por cliente, redondeado hacia arriba.
-          </li>
-        </ol>
-        <p className="mt-4 border-t border-borde pt-3 text-xs leading-relaxed text-marino-500">
-          Supuesto prudente: se toma el año 1 —que todavía incluye la etapa de arranque— como base
-          de todos los años siguientes. El modelo no incluye impuestos, depreciación ni reposición
-          de equipos.
-        </p>
-      </Tarjeta>
-    </div>
+  return (
+    <DisenoPantalla
+      pie={pie}
+      formulario={
+        <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2">
+          <CampoNumero
+            etiqueta="Periodo de evaluación"
+            unidad="años"
+            unidadSingular="año"
+            placeholder="Ej.: 10"
+            requerido
+            min={1}
+            paso={1}
+            valor={parametros.vidaUtil}
+            ayuda="Suele coincidir con la vida útil de lo que se compra. Entero entre 1 y 50."
+            onChange={(v) => actualizar((c) => void (c.parametros.vidaUtil = v))}
+          />
+          <CampoNumero
+            etiqueta="Tasa de evaluación (TMAR)"
+            unidad="% anual"
+            placeholder="Ej.: 20"
+            requerido
+            min={0}
+            paso={0.1}
+            valor={parametros.tasaEvaluacion}
+            ayuda="Rentabilidad mínima que el dueño exige a su dinero. Trae los flujos futuros a pesos de hoy."
+            onChange={(v) => actualizar((c) => void (c.parametros.tasaEvaluacion = v))}
+          />
+          <CampoNumero
+            etiqueta="Crecimiento anual"
+            unidad="% anual"
+            placeholder="Ej.: 3"
+            requerido
+            paso={0.1}
+            valor={parametros.crecimientoAnual}
+            ayuda="Cuánto crece cada año el flujo frente al anterior. Puede ser 0 %."
+            onChange={(v) => actualizar((c) => void (c.parametros.crecimientoAnual = v))}
+          />
+          <CampoNumero
+            etiqueta="Valor de salvamento"
+            unidad="$"
+            placeholder="Ej.: 500.000"
+            min={0}
+            valor={parametros.valorSalvamento}
+            ayuda="Lo que se recuperaría vendiendo los equipos al final. Se suma al último año."
+            onChange={(v) => actualizar((c) => void (c.parametros.valorSalvamento = v))}
+          />
+        </div>
+      }
+      calculados={
+        <ResumenEnVivo
+          heroe={{
+            etiqueta: "VPN con estos parámetros",
+            valor: pesos(resultado?.vpn),
+            faltante: resultado ? undefined : "Complete los pasos anteriores para ver el VPN",
+            signo: resultado ? (resultado.vpn < 0 ? "negativo" : "positivo") : undefined,
+          }}
+          lineas={[
+            {
+              etiqueta: "TIR",
+              valor: resultado?.tir == null ? "No existe" : porcentaje(resultado.tir * 100),
+              faltante: resultado ? undefined : "—",
+            },
+            {
+              etiqueta: "Recuperación simple",
+              valor: meses(resultado?.recuperacionMeses),
+              faltante: resultado ? undefined : "—",
+            },
+          ]}
+        >
+          <details className="group mt-3 border-t border-linea pt-3">
+            <summary className="flex cursor-pointer list-none items-center justify-between text-[13px] font-semibold">
+              Cómo se calcula
+              <span aria-hidden className="text-tenue transition-transform group-open:rotate-45">
+                +
+              </span>
+            </summary>
+            <dl className="mt-3 space-y-2.5">
+              {METODO.map(([titulo, texto]) => (
+                <div key={titulo}>
+                  <dt className="text-[13px] font-semibold">{titulo}</dt>
+                  <dd className="text-[12px] leading-relaxed text-tenue">{texto}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-3 text-[12px] leading-relaxed text-tenue">
+              Supuesto prudente: el año 1, que incluye el arranque, es la base de los siguientes.
+              Sin impuestos, depreciación ni reposición de equipos.
+            </p>
+          </details>
+        </ResumenEnVivo>
+      }
+    />
   );
 }

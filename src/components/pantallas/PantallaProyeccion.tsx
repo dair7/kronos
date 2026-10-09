@@ -1,32 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useCaso } from "../ProveedorCaso";
 import { CeldaNumero } from "../ui/Campo";
 import { Boton } from "../ui/Boton";
+import { DisenoPantalla } from "../ui/DisenoPantalla";
 import { ResumenEnVivo } from "../ui/ResumenEnVivo";
-import { CeldaTabla, ContenedorTabla, EncabezadoTabla, FilaTabla, PieTabla } from "../ui/TablaEditable";
 import { derivados } from "@/lib/calculos";
 import { numero, pesos } from "@/lib/formato";
 
-const PLANTILLA = "md:grid-cols-[6rem_1fr_14rem]";
+const PLANTILLA = "grid-cols-[3.5rem_6.5rem_1fr] md:grid-cols-[5rem_1fr_12rem]";
 
-const NOMBRES_MES = [
-  "Mes 1",
-  "Mes 2",
-  "Mes 3",
-  "Mes 4",
-  "Mes 5",
-  "Mes 6",
-  "Mes 7",
-  "Mes 8",
-  "Mes 9",
-  "Mes 10",
-  "Mes 11",
-  "Mes 12",
-];
-
-export function PantallaProyeccion() {
+export function PantallaProyeccion({ pie }: { pie: ReactNode }) {
   const { caso, actualizar } = useCaso();
   const d = derivados(caso);
   const [relleno, setRelleno] = useState<number | null>(null);
@@ -39,6 +24,8 @@ export function PantallaProyeccion() {
     (suma, clientes) => suma + (flujoDelMes(clientes) ?? 0),
     0,
   );
+  const mesesEnPerdida = caso.proyeccion.filter((c) => (flujoDelMes(c) ?? 0) < 0).length;
+  const maximoBarra = Math.max(1, d.proyeccionMaxima, d.puntoEquilibrio ?? 0);
 
   const llenarTodos = () => {
     if (relleno === null) return;
@@ -48,121 +35,135 @@ export function PantallaProyeccion() {
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
-      <div className="space-y-5 lg:col-span-2">
-        <div className="flex flex-wrap items-end gap-3 rounded-lg border border-borde bg-marino-50/60 p-3">
-          <div className="min-w-0 flex-1">
-            <label
-              htmlFor="relleno-masivo"
-              className="block text-sm font-medium text-marino-800"
-            >
-              Llenar todos los meses con{" "}
-              <span className="font-normal text-marino-500">(clientes/mes)</span>
-            </label>
-            <input
-              id="relleno-masivo"
-              type="number"
-              min={0}
-              inputMode="numeric"
-              placeholder="400"
-              className="cifra mt-1.5 min-h-11 w-full rounded-lg border border-borde bg-white px-3 py-2 text-sm hover:border-marino-300 focus:border-marino-500 focus:outline-none"
-              value={relleno === null ? "" : String(relleno)}
-              onChange={(e) =>
-                setRelleno(e.target.value === "" ? null : Number(e.target.value) || 0)
-              }
-            />
+    <DisenoPantalla
+      pie={pie}
+      formulario={
+        <div className="space-y-5">
+          <div className="flex flex-wrap items-end gap-3 rounded-2xl bg-fondo p-4">
+            <div className="w-full min-w-0 sm:w-auto sm:flex-1">
+              <p aria-hidden className="mb-1.5 text-[13px] font-medium text-tenue">
+                Llenar los 12 meses con
+              </p>
+              <CeldaNumero
+                etiquetaAccesible="Clientes adicionales para llenar los 12 meses"
+                valor={relleno}
+                min={0}
+                placeholder="Ej.: 300"
+                unidad="clientes/mes"
+                unidadSingular="cliente/mes"
+                alineacion="izquierda"
+                onChange={setRelleno}
+              />
+            </div>
+            <Boton variante="secundario" onClick={llenarTodos} disabled={relleno === null}>
+              Aplicar a los 12 meses
+            </Boton>
           </div>
-          <Boton variante="secundario" onClick={llenarTodos} disabled={relleno === null}>
-            Aplicar a los 12 meses
-          </Boton>
-        </div>
 
-        <ContenedorTabla>
-          <EncabezadoTabla
-            plantilla={PLANTILLA}
-            columnas={[
-              { titulo: "Mes" },
-              { titulo: "Clientes adicionales", alineacion: "derecha" },
-              { titulo: "Flujo neto del mes ($)", alineacion: "derecha" },
-            ]}
-          />
-          {caso.proyeccion.map((clientes, indice) => {
-            const flujo = flujoDelMes(clientes);
-            return (
-              <FilaTabla key={indice} plantilla={PLANTILLA}>
-                <CeldaTabla etiqueta="Mes">
-                  <p className="py-2 text-sm font-medium text-marino-800">
-                    {NOMBRES_MES[indice]}
-                  </p>
-                </CeldaTabla>
-                <CeldaTabla etiqueta="Clientes adicionales">
-                  <CeldaNumero
-                    etiquetaAccesible={`Clientes adicionales proyectados en el mes ${indice + 1}`}
-                    valor={clientes}
-                    min={0}
-                    onChange={(v) => actualizar((c) => void (c.proyeccion[indice] = v))}
+          {/* Una fila compacta por mes: "Mes 1 | clientes | flujo". La barra delgada
+              compara los clientes del mes con el punto de equilibrio: en celular va
+              debajo de la fila y desde 768 px al lado del campo. */}
+          <div role="table" aria-label="Proyección de clientes adicionales por mes">
+            <div
+              role="row"
+              className={`grid gap-x-3 border-b border-linea pb-2.5 text-[12px] font-medium text-tenue ${PLANTILLA}`}
+            >
+              <span role="columnheader">Mes</span>
+              <span role="columnheader">Clientes adicionales</span>
+              <span role="columnheader" className="text-right">
+                Flujo neto del mes
+              </span>
+            </div>
+            {caso.proyeccion.map((clientes, indice) => {
+              const flujo = flujoDelMes(clientes);
+              const barra = (
+                <div aria-hidden className="relative h-1.5 flex-1 rounded-full bg-fondo md:h-2">
+                  <div
+                    className={`h-full rounded-full ${flujo !== null && flujo < 0 ? "bg-contexto" : "bg-positivo"}`}
+                    style={{ width: `${Math.min(100, ((clientes ?? 0) / maximoBarra) * 100)}%` }}
                   />
-                </CeldaTabla>
-                <CeldaTabla etiqueta="Flujo neto del mes ($)" alineacion="derecha">
+                  {d.puntoEquilibrio !== null && (
+                    <span
+                      className="absolute -top-1 h-3.5 w-0.5 rounded-full bg-tinta md:h-4"
+                      style={{ left: `${(d.puntoEquilibrio / maximoBarra) * 100}%` }}
+                    />
+                  )}
+                </div>
+              );
+              return (
+                <div
+                  key={indice}
+                  role="row"
+                  className={`grid items-center gap-x-3 gap-y-2 border-b border-linea py-2 ${PLANTILLA}`}
+                >
+                  <p role="cell" className="text-sm font-semibold whitespace-nowrap">
+                    Mes {indice + 1}
+                  </p>
+                  <div role="cell" className="flex items-center gap-3">
+                    <div className="w-full md:w-36 md:shrink-0">
+                      <CeldaNumero
+                        etiquetaAccesible={`Clientes adicionales proyectados en el mes ${indice + 1}`}
+                        valor={clientes}
+                        min={0}
+                        onChange={(v) => actualizar((c) => void (c.proyeccion[indice] = v))}
+                      />
+                    </div>
+                    <div className="hidden flex-1 md:flex">{barra}</div>
+                  </div>
                   <p
-                    className={`cifra py-2 text-sm font-medium ${
-                      flujo === null
-                        ? "text-marino-400"
-                        : flujo < 0
-                          ? "text-peligro-700"
-                          : "text-marino-900"
+                    role="cell"
+                    className={`cifra text-right text-sm font-semibold whitespace-nowrap ${
+                      flujo === null ? "text-tenue" : flujo < 0 ? "text-negativo" : ""
                     }`}
                   >
                     {flujo === null ? "Falta el dato" : pesos(flujo)}
                   </p>
-                </CeldaTabla>
-              </FilaTabla>
-            );
-          })}
-        </ContenedorTabla>
-
-        <PieTabla
-          etiqueta="Flujo neto del año 1"
-          nota={`${numero(d.clientesAnio1)} clientes adicionales en el año · suma de los 12 meses`}
-          valor={pesos(totalAnio1)}
+                  <div className="col-span-3 flex pb-1 md:hidden">{barra}</div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-[12px] text-tenue">
+            La raya negra de cada barra marca el punto de equilibrio
+            {d.puntoEquilibrio !== null ? ` (${numero(d.puntoEquilibrio)} clientes/mes)` : ""}: los
+            meses por debajo cierran en negativo.
+          </p>
+        </div>
+      }
+      calculados={
+        <ResumenEnVivo
+          heroe={{
+            etiqueta: "Flujo neto del año 1",
+            valor: pesos(totalAnio1),
+            signo: totalAnio1 < 0 ? "negativo" : undefined,
+          }}
+          lineas={[
+            {
+              etiqueta: "Punto de equilibrio",
+              valor: `${numero(d.puntoEquilibrio ?? 0)} clientes/mes`,
+              faltante:
+                d.puntoEquilibrio === null ? "El margen por cliente debe ser mayor que 0" : undefined,
+            },
+            {
+              etiqueta: "Proyección máxima",
+              valor: `${numero(d.proyeccionMaxima)} clientes/mes`,
+              faltante: d.proyeccionMaxima > 0 ? undefined : "Falta llenar la proyección",
+            },
+            { etiqueta: "Clientes adicionales del año", valor: numero(d.clientesAnio1) },
+            {
+              etiqueta: "Meses en negativo",
+              valor: `${numero(mesesEnPerdida)} de 12`,
+              signo: mesesEnPerdida > 0 ? "negativo" : undefined,
+            },
+          ]}
+          pie={
+            <>
+              Cada mes aporta clientes × margen − costos fijos. Es normal que los primeros meses
+              cierren en negativo mientras la clientela crece.
+            </>
+          }
         />
-      </div>
-
-      <ResumenEnVivo
-        titulo="Referencia de la proyección"
-        lineas={[
-          {
-            etiqueta: "Punto de equilibrio",
-            valor: `${numero(d.puntoEquilibrio ?? 0)} clientes/mes`,
-            faltante:
-              d.puntoEquilibrio === null
-                ? "El margen por cliente debe ser mayor que 0"
-                : undefined,
-            destacado: true,
-          },
-          {
-            etiqueta: "Proyección máxima",
-            valor: `${numero(d.proyeccionMaxima)} clientes/mes`,
-            faltante: d.proyeccionMaxima > 0 ? undefined : "Falta llenar la proyección",
-          },
-          {
-            etiqueta: "Margen por cliente",
-            valor: pesos(d.margen),
-            faltante: d.margen !== 0 ? undefined : "Faltan datos del negocio",
-          },
-          {
-            etiqueta: "Costos fijos",
-            valor: `${pesos(d.costosFijosMensuales)} /mes`,
-          },
-        ]}
-        pie={
-          <>
-            Los meses en rojo tienen flujo negativo: todavía no llegan al punto de equilibrio y la
-            ampliación se financia con lo que gana el resto del año. Es normal al comienzo, mientras
-            la clientela crece.
-          </>
-        }
-      />
-    </div>
+      }
+    />
   );
 }

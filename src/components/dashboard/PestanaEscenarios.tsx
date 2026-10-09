@@ -1,87 +1,93 @@
 "use client";
 
 import { useCaso } from "../ProveedorCaso";
-import { CampoNumero, CampoTexto } from "../ui/Campo";
+import { CampoNumero } from "../ui/Campo";
 import { Aviso } from "../ui/Aviso";
-import { Nota, Tarjeta } from "../ui/Tarjeta";
-import { GraficaAcumuladoEscenarios, GraficaVpnEscenarios } from "./Graficas";
+import { Chip, Tarjeta } from "../ui/Tarjeta";
+import { CifraPesos } from "../ui/ResumenEnVivo";
+import { COLORES, GraficaVpnEscenarios, Leyenda } from "./Graficas";
+import { veredicto } from "./Indicadores";
 import { evaluarEscenario, type ResultadoEscenario } from "@/lib/calculos";
-import type { Caso } from "@/lib/datos";
+import type { Caso, Escenario } from "@/lib/datos";
 import { meses, numero, pesos, porcentaje } from "@/lib/formato";
 
 export function PestanaEscenarios({ caso, equilibrio }: { caso: Caso; equilibrio: number | null }) {
   const { actualizar } = useCaso();
 
-  const resultados = caso.escenarios
-    .map((escenario) =>
+  const evaluados = caso.escenarios.map((escenario) => ({
+    escenario,
+    resultado:
       escenario.clientes === null
         ? null
         : evaluarEscenario(caso, escenario.nombre || "Escenario", escenario.clientes),
-    )
+  }));
+  const resultados = evaluados
+    .map((e) => e.resultado)
     .filter((r): r is ResultadoEscenario => r !== null);
 
+  // Escenario base: el que coincide con la proyeccion del caso; si ninguno
+  // coincide, el del medio.
+  const maximo = Math.max(0, ...caso.proyeccion.map((c) => c ?? 0));
+  const base =
+    resultados.find((r) => r.clientes === maximo)?.nombre ??
+    resultados[Math.floor(resultados.length / 2)]?.nombre ??
+    null;
+
+  // Escala comun de las barras de clientes para que se comparen entre tarjetas.
+  const escala = Math.max(1, equilibrio ?? 0, ...resultados.map((r) => r.clientes)) * 1.1;
+
   return (
-    <div className="space-y-6">
-      {/* Recuadros editables */}
-      <Tarjeta
-        titulo="Escenarios por comparar"
-        descripcion="Cada escenario conserva la misma curva de crecimiento de la proyección, reescalada a la cantidad de clientes que alcanzaría a capacidad plena."
-      >
-        <div className="grid gap-4 md:grid-cols-3">
-          {caso.escenarios.map((escenario, indice) => (
-            <div key={escenario.id} className="space-y-3 rounded-lg border border-borde p-4">
-              <CampoTexto
-                etiqueta={`Escenario ${indice + 1}`}
-                valor={escenario.nombre}
-                placeholder="A — Conservador"
-                onChange={(v) => actualizar((c) => void (c.escenarios[indice].nombre = v))}
-              />
-              <CampoNumero
-                etiqueta="Clientes a capacidad plena"
-                unidad="(clientes/mes)"
-                min={0}
-                valor={escenario.clientes}
-                onChange={(v) => actualizar((c) => void (c.escenarios[indice].clientes = v))}
-              />
-            </div>
-          ))}
-        </div>
-        <Nota>
-          KRONOS no señala un escenario ganador: muestra los resultados de cada uno para que la
-          decisión la tome quien conoce el negocio.
-        </Nota>
-      </Tarjeta>
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+      {equilibrio !== null && (
+        <p className="flex items-center gap-2 text-[12px] font-medium text-tenue xl:col-span-12">
+          <span aria-hidden className="h-3.5 w-[3px] rounded-full bg-tinta" />
+          En cada barra, la raya negra marca el punto de equilibrio: {numero(equilibrio)} clientes
+          adicionales al mes.
+        </p>
+      )}
+      <div className="grid gap-4 md:grid-cols-3 xl:col-span-12">
+        {evaluados.map(({ escenario, resultado }, indice) => (
+          <TarjetaEscenario
+            key={escenario.id}
+            escenario={escenario}
+            resultado={resultado}
+            esBase={resultado?.nombre === base}
+            equilibrio={equilibrio}
+            escala={escala}
+            onNombre={(v) => actualizar((c) => void (c.escenarios[indice].nombre = v))}
+            onClientes={(v) => actualizar((c) => void (c.escenarios[indice].clientes = v))}
+          />
+        ))}
+      </div>
 
       {resultados.length === 0 ? (
-        <Aviso tono="alerta" titulo="Faltan los clientes de los escenarios">
-          Escriba, en al menos un escenario, cuántos clientes adicionales atendería el negocio al
-          mes una vez la ampliación esté funcionando a capacidad plena.
+        <Aviso tono="alerta" titulo="Faltan los clientes de los escenarios" className="xl:col-span-12">
+          Escriba, en al menos un escenario, cuántos clientes adicionales atendería el negocio al mes
+          una vez la ampliación esté funcionando a capacidad plena.
         </Aviso>
       ) : (
         <>
-          <TablaComparativa resultados={resultados} equilibrio={equilibrio} />
-
-          <div className="grid gap-6 xl:grid-cols-2">
-            <GraficaVpnEscenarios escenarios={resultados} />
-            <GraficaAcumuladoEscenarios escenarios={resultados} />
-          </div>
-
           <Tarjeta
-            titulo="Lectura de cada escenario"
-            descripcion="Qué dice cada conjunto de cifras, en palabras."
+            titulo="VPN por escenario"
+            descripcion="Lo único que cambia entre escenarios son los clientes"
+            acciones={
+              <Leyenda
+                items={[
+                  { nombre: "Base", muestra: "barra", color: COLORES.tinta },
+                  { nombre: "Otros", muestra: "barra", color: COLORES.contexto },
+                  { nombre: "Negativo", muestra: "barra", color: COLORES.negativo },
+                ]}
+              />
+            }
+            className="xl:col-span-5"
+            cuerpo="flex min-w-0 flex-1 flex-col"
           >
-            <div className="space-y-4">
-              {resultados.map((resultado) => (
-                <article
-                  key={resultado.nombre}
-                  className="border-l-2 border-dorado-300 pl-3 text-sm leading-relaxed text-marino-700"
-                >
-                  <h3 className="font-semibold text-marino-900">{resultado.nombre}</h3>
-                  <p className="mt-1">{lecturaEscenario(resultado, equilibrio)}</p>
-                </article>
-              ))}
+            {/* La grafica estira hasta la altura de la tabla de al lado */}
+            <div className="min-h-64 flex-1">
+              <GraficaVpnEscenarios escenarios={resultados} base={base} />
             </div>
           </Tarjeta>
+          <TablaComparativa resultados={resultados} equilibrio={equilibrio} className="xl:col-span-7" />
         </>
       )}
     </div>
@@ -90,151 +96,282 @@ export function PestanaEscenarios({ caso, equilibrio }: { caso: Caso; equilibrio
 
 // ---------------------------------------------------------------------------
 
+function TarjetaEscenario({
+  escenario,
+  resultado,
+  esBase,
+  equilibrio,
+  escala,
+  onNombre,
+  onClientes,
+}: {
+  escenario: Escenario;
+  resultado: ResultadoEscenario | null;
+  esBase: boolean;
+  equilibrio: number | null;
+  escala: number;
+  onNombre: (valor: string) => void;
+  onClientes: (valor: number | null) => void;
+}) {
+  const estado = resultado ? veredicto(resultado.vpn) : null;
+  const clientes = escenario.clientes ?? 0;
+  const debajo = equilibrio !== null && clientes < equilibrio;
+
+  return (
+    <section
+      aria-label={escenario.nombre || "Escenario"}
+      className="tarjeta-impresion evitar-corte flex min-w-0 flex-col rounded-tarjeta bg-tarjeta p-5 shadow-tarjeta sm:p-6"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <input
+            type="text"
+            value={escenario.nombre}
+            placeholder="Nombre del escenario"
+            aria-label="Nombre del escenario"
+            onChange={(e) => onNombre(e.target.value)}
+            className="-ml-2 w-full rounded-lg px-2 py-0.5 text-[15px] font-semibold hover:bg-fondo focus:bg-fondo focus:outline-none"
+          />
+          <p className="text-[12px] font-medium text-tenue">
+            {esBase ? "Escenario base del caso" : "Escenario alternativo"}
+          </p>
+        </div>
+        {estado && (
+          <Chip tono={estado.tono}>
+            <span aria-hidden className="size-1.5 rounded-full bg-current" />
+            {estado.texto}
+          </Chip>
+        )}
+      </div>
+
+      {resultado ? (
+        <>
+          <p className="mt-4 text-[13px] font-medium text-tenue">VPN</p>
+          <p className={`cifra text-[32px] leading-tight font-bold ${resultado.vpn < 0 ? "text-negativo" : ""}`}>
+            <CifraPesos texto={pesos(resultado.vpn)} />
+          </p>
+          <dl className="mt-3 grid grid-cols-2 gap-3">
+            <div className="rounded-2xl bg-fondo px-3 py-2.5">
+              <dt className="text-[12px] font-medium text-tenue">TIR</dt>
+              <dd className="cifra text-[15px] font-bold">
+                {resultado.tir === null ? "No existe" : porcentaje(resultado.tir * 100)}
+              </dd>
+            </div>
+            <div className="rounded-2xl bg-fondo px-3 py-2.5">
+              <dt className="text-[12px] font-medium text-tenue">Recuperación simple</dt>
+              <dd className="cifra text-[15px] font-bold">
+                {resultado.recuperacionMeses === null ? "No se recupera" : meses(resultado.recuperacionMeses)}
+              </dd>
+            </div>
+          </dl>
+        </>
+      ) : (
+        <p className="mt-4 rounded-2xl bg-fondo px-3 py-6 text-center text-[13px] text-tenue">
+          Escriba los clientes para calcular este escenario.
+        </p>
+      )}
+
+      {/* Clientes del escenario frente al punto de equilibrio */}
+      <div className="mt-5">
+        <div className="flex items-baseline justify-between text-[12px] font-medium text-tenue">
+          <span>Clientes frente al equilibrio</span>
+          {equilibrio !== null && resultado && (
+            <span className={`cifra font-semibold ${debajo ? "text-negativo" : "text-positivo-texto"}`}>
+              {debajo
+                ? `${numero(equilibrio - clientes)} por debajo`
+                : `${numero(clientes - equilibrio)} por encima`}
+            </span>
+          )}
+        </div>
+        <div aria-hidden className="relative mt-2 h-2.5 rounded-full bg-fondo">
+          <div
+            className={`h-full rounded-full ${debajo ? "bg-negativo" : "bg-positivo"}`}
+            style={{ width: `${Math.min(100, (clientes / escala) * 100)}%` }}
+          />
+          {equilibrio !== null && (
+            <span
+              className="absolute -top-1 h-[18px] w-[3px] -translate-x-1/2 rounded-full bg-tinta ring-2 ring-tarjeta"
+              style={{ left: `${(equilibrio / escala) * 100}%` }}
+            />
+          )}
+        </div>
+      </div>
+
+      <CampoNumero
+        className="mt-4"
+        etiqueta="Clientes a capacidad plena"
+        unidad="clientes/mes"
+        unidadSingular="cliente/mes"
+        min={0}
+        valor={escenario.clientes}
+        onChange={onClientes}
+      />
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
 function TablaComparativa({
   resultados,
   equilibrio,
+  className,
 }: {
   resultados: ResultadoEscenario[];
   equilibrio: number | null;
+  className?: string;
 }) {
-  const filas: { etiqueta: string; valor: (r: ResultadoEscenario) => string; destacar?: boolean }[] =
-    [
-      {
-        etiqueta: "Clientes adicionales (clientes/mes)",
-        valor: (r) => numero(r.clientes),
-      },
-      {
-        etiqueta: "Frente al punto de equilibrio",
-        valor: (r) =>
-          r.distanciaEquilibrio === null
-            ? "No aplica"
-            : r.distanciaEquilibrio >= 0
-              ? `${numero(r.distanciaEquilibrio)} por encima`
-              : `${numero(Math.abs(r.distanciaEquilibrio))} por debajo`,
-      },
-      { etiqueta: "Ingresos adicionales año 1 ($)", valor: (r) => pesos(r.ingresosAnio1) },
-      { etiqueta: "Costos adicionales año 1 ($)", valor: (r) => pesos(r.costosAnio1) },
-      { etiqueta: "Flujo neto año 1 ($)", valor: (r) => pesos(r.flujoAnio1) },
-      { etiqueta: "VPN ($ de hoy)", valor: (r) => pesos(r.vpn), destacar: true },
-      {
-        etiqueta: "TIR (% anual)",
-        valor: (r) => (r.tir === null ? "No existe" : porcentaje(r.tir * 100)),
-      },
-      {
-        etiqueta: "Recuperación de la inversión",
-        valor: (r) => meses(r.recuperacionMeses),
-      },
-    ];
+  const filas: {
+    etiqueta: string;
+    valor: (r: ResultadoEscenario) => string;
+    negativo: (r: ResultadoEscenario) => boolean;
+  }[] = [
+    { etiqueta: "Clientes adicionales / mes", valor: (r) => numero(r.clientes), negativo: () => false },
+    {
+      etiqueta: "Frente al equilibrio",
+      valor: (r) =>
+        r.distanciaEquilibrio === null
+          ? "No aplica"
+          : r.distanciaEquilibrio >= 0
+            ? `+${numero(r.distanciaEquilibrio)}`
+            : `−${numero(Math.abs(r.distanciaEquilibrio))}`,
+      negativo: (r) => (r.distanciaEquilibrio ?? 0) < 0,
+    },
+    { etiqueta: "Ingresos año 1", valor: (r) => pesos(r.ingresosAnio1), negativo: () => false },
+    { etiqueta: "Costos año 1", valor: (r) => pesos(r.costosAnio1), negativo: () => false },
+    { etiqueta: "Flujo neto año 1", valor: (r) => pesos(r.flujoAnio1), negativo: (r) => r.flujoAnio1 < 0 },
+    {
+      etiqueta: "TIR",
+      valor: (r) => (r.tir === null ? "No existe" : porcentaje(r.tir * 100)),
+      negativo: (r) => r.tir === null,
+    },
+    {
+      etiqueta: "Recuperación simple",
+      valor: (r) => (r.recuperacionMeses === null ? "No se recupera" : meses(r.recuperacionMeses)),
+      negativo: (r) => r.recuperacionMeses === null,
+    },
+    {
+      etiqueta: "Recuperación descontada",
+      valor: (r) =>
+        r.recuperacionDescontadaMeses === null ? "No se recupera" : meses(r.recuperacionDescontadaMeses),
+      negativo: (r) => r.recuperacionDescontadaMeses === null,
+    },
+  ];
 
   return (
     <Tarjeta
       titulo="Comparación de escenarios"
       descripcion={
         equilibrio === null
-          ? undefined
-          : `El punto de equilibrio del proyecto es de ${numero(equilibrio)} clientes adicionales al mes.`
+          ? "Misma inversión, costos y parámetros"
+          : `Punto de equilibrio: ${numero(equilibrio)} clientes adicionales al mes`
       }
+      className={className}
     >
-      <div className="desplazable-x -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-        <table className="w-full min-w-[34rem] border-collapse text-sm">
-          <caption className="sr-only">
-            Indicadores económicos obtenidos en cada escenario de clientes
-          </caption>
+      {/* Celular: una lista por indicador, con los tres valores uno debajo del otro */}
+      <div className="sm:hidden">
+        {filas.map((fila) => (
+          <div key={fila.etiqueta} className="border-b border-linea py-3 first:pt-0">
+            <p className="text-[12px] font-semibold text-tenue">{fila.etiqueta}</p>
+            <dl className="mt-1.5 space-y-1">
+              {resultados.map((resultado) => (
+                <div key={resultado.nombre} className="flex items-baseline justify-between gap-3">
+                  <dt className="truncate text-[13px] font-medium">{resultado.nombre}</dt>
+                  <dd
+                    className={`cifra text-sm font-semibold whitespace-nowrap ${
+                      fila.negativo(resultado) ? "text-negativo" : ""
+                    }`}
+                  >
+                    {fila.valor(resultado)}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        ))}
+        <div className="mt-3 rounded-2xl bg-tinta px-4 py-3 text-white">
+          <p className="text-[12px] font-semibold text-white/60">VPN</p>
+          <dl className="mt-1.5 space-y-1">
+            {resultados.map((resultado) => (
+              <div key={resultado.nombre} className="flex items-baseline justify-between gap-3">
+                <dt className="truncate text-[13px] font-medium">{resultado.nombre}</dt>
+                <dd
+                  className={`cifra text-[15px] font-bold whitespace-nowrap ${
+                    resultado.vpn < 0 ? "text-[#f87171]" : ""
+                  }`}
+                >
+                  {pesos(resultado.vpn)}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </div>
+
+      {/* Desde 640 px: tabla */}
+      <div className="desplazable-x hidden overflow-x-auto sm:block">
+        <table className="w-full min-w-[32rem] border-separate border-spacing-0 text-sm">
+          <caption className="sr-only">Indicadores económicos obtenidos en cada escenario</caption>
           <thead>
-            <tr className="border-b border-borde">
-              <th scope="col" className="py-2 pr-3 text-left text-xs uppercase tracking-wide text-marino-500">
+            <tr className="text-[12px] text-tenue">
+              <th scope="col" className="h-10 rounded-l-xl bg-fondo pl-4 text-left font-medium">
                 Indicador
               </th>
-              {resultados.map((resultado) => (
+              {resultados.map((resultado, indice) => (
                 <th
                   key={resultado.nombre}
                   scope="col"
-                  className="py-2 px-3 text-right text-xs font-semibold text-marino-800"
+                  className={`h-10 bg-fondo px-3 text-right font-semibold text-tinta ${
+                    indice === resultados.length - 1 ? "rounded-r-xl pr-4" : ""
+                  }`}
                 >
                   {resultado.nombre}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="cifra">
             {filas.map((fila) => (
-              <tr
-                key={fila.etiqueta}
-                className={`border-b border-borde/70 ${fila.destacar ? "bg-marino-50" : ""}`}
-              >
-                <th
-                  scope="row"
-                  className="py-2 pr-3 text-left font-medium text-marino-700"
-                >
+              <tr key={fila.etiqueta} className="[&>*]:border-b [&>*]:border-linea">
+                <th scope="row" className="h-12 pl-4 text-left text-[13px] font-medium text-tenue">
                   {fila.etiqueta}
                 </th>
-                {resultados.map((resultado) => {
-                  const texto = fila.valor(resultado);
-                  const negativo =
-                    texto.includes("-") || texto === "No existe" || texto.startsWith("No se");
-                  return (
-                    <td
-                      key={resultado.nombre}
-                      className={`cifra py-2 px-3 text-right ${
-                        fila.destacar ? "font-semibold" : ""
-                      } ${negativo ? "text-peligro-700" : "text-marino-900"}`}
-                    >
-                      {texto}
-                    </td>
-                  );
-                })}
+                {resultados.map((resultado, indice) => (
+                  <td
+                    key={resultado.nombre}
+                    className={`h-12 px-3 text-right font-semibold whitespace-nowrap ${
+                      fila.negativo(resultado) ? "text-negativo" : ""
+                    } ${indice === resultados.length - 1 ? "pr-4" : ""}`}
+                  >
+                    {fila.valor(resultado)}
+                  </td>
+                ))}
               </tr>
             ))}
           </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row" className="h-14 rounded-l-2xl bg-tinta pl-4 text-left text-sm font-semibold text-white">
+                VPN
+              </th>
+              {resultados.map((resultado, indice) => (
+                <td
+                  key={resultado.nombre}
+                  className={`cifra h-14 bg-tinta px-3 text-right text-[15px] font-bold ${
+                    resultado.vpn < 0 ? "text-[#f87171]" : "text-white"
+                  } ${indice === resultados.length - 1 ? "rounded-r-2xl pr-4" : ""}`}
+                >
+                  {pesos(resultado.vpn)}
+                </td>
+              ))}
+            </tr>
+          </tfoot>
         </table>
       </div>
-      <Nota>
-        Todos los escenarios usan la misma inversión, los mismos costos y los mismos parámetros: lo
-        único que cambia es cuántos clientes adicionales se alcanzan a atender al mes.
-      </Nota>
+      <p className="mt-3 text-[12px] leading-relaxed text-tenue">
+        KRONOS no señala un escenario ganador: muestra los resultados para que decida quien conoce el
+        negocio.
+      </p>
     </Tarjeta>
   );
-}
-
-// ---------------------------------------------------------------------------
-
-/** Convierte los indicadores de un escenario en una lectura en palabras. */
-function lecturaEscenario(resultado: ResultadoEscenario, equilibrio: number | null): string {
-  const partes: string[] = [];
-
-  if (equilibrio !== null && resultado.distanciaEquilibrio !== null) {
-    partes.push(
-      resultado.sobreEquilibrio
-        ? `Con ${numero(resultado.clientes)} clientes adicionales al mes el proyecto opera ${numero(resultado.distanciaEquilibrio)} clientes por encima del punto de equilibrio de ${numero(equilibrio)}.`
-        : `Con ${numero(resultado.clientes)} clientes adicionales al mes el proyecto se queda ${numero(Math.abs(resultado.distanciaEquilibrio))} clientes por debajo del punto de equilibrio de ${numero(equilibrio)}, de modo que la operación no alcanza a cubrir sus costos fijos.`,
-    );
-  } else {
-    partes.push(`Escenario con ${numero(resultado.clientes)} clientes adicionales al mes.`);
-  }
-
-  if (resultado.vpn >= 0) {
-    partes.push(
-      `El VPN es de ${pesos(resultado.vpn)} y el flujo del año 1, de ${pesos(resultado.flujoAnio1)}.`,
-    );
-  } else {
-    partes.push(
-      `El VPN es de ${pesos(resultado.vpn)} —negativo— y el flujo del año 1 es de ${pesos(resultado.flujoAnio1)}.`,
-    );
-  }
-
-  if (resultado.tir === null) {
-    partes.push(
-      "No existe TIR porque los flujos nunca cambian de signo: el proyecto no llega a generar dinero que compense la inversión.",
-    );
-  } else {
-    partes.push(`La TIR es de ${porcentaje(resultado.tir * 100)}.`);
-  }
-
-  partes.push(
-    resultado.recuperacionMeses === null
-      ? "La inversión no se recupera dentro del periodo evaluado."
-      : `La inversión se recupera en ${meses(resultado.recuperacionMeses)}.`,
-  );
-
-  return partes.join(" ");
 }

@@ -43,6 +43,15 @@ export interface Derivados {
   clientesPorDia: number | null;
   /** Clientes adicionales minimos para cubrir los costos fijos adicionales. */
   puntoEquilibrio: number | null;
+  /** Costos fijos / margen, sin redondear (268,97 en Espitia). */
+  puntoEquilibrioExacto: number | null;
+  /**
+   * Margen de seguridad, en %: (clientes proyectados - equilibrio exacto) /
+   * clientes proyectados. Cuanto pueden caer los clientes antes de perder.
+   */
+  margenSeguridad: number | null;
+  /** Cuanto supera la proyeccion al punto de equilibrio, en % del equilibrio. */
+  sobreEquilibrio: number | null;
   /** Mayor valor de la proyeccion de 12 meses (capacidad plena). */
   proyeccionMaxima: number;
   /** Suma de los 12 meses de la proyeccion. */
@@ -75,6 +84,8 @@ export interface Resultado {
   tir: number | null;
   /** Meses con decimales hasta recuperar la inversion. null si no se recupera. */
   recuperacionMeses: number | null;
+  /** Recuperacion con los flujos mensuales descontados a la TMAR. */
+  recuperacionDescontadaMeses: number | null;
   puntoEquilibrio: number | null;
   tablaFlujo: FilaFlujo[];
   /** Saldo acumulado mes a mes partiendo de -inversion (grafica 4). */
@@ -95,6 +106,7 @@ export interface ResultadoEscenario {
   vpn: number;
   tir: number | null;
   recuperacionMeses: number | null;
+  recuperacionDescontadaMeses: number | null;
   /** Flujo acumulado por anio, para la grafica comparativa. */
   acumuladoPorAnio: number[];
 }
@@ -150,6 +162,11 @@ export function derivados(caso: Caso): Derivados {
   const proyeccionMaxima = proyeccionNumerica.length ? Math.max(...proyeccionNumerica) : 0;
   const clientesAnio1 = proyeccionNumerica.reduce((suma, c) => suma + c, 0);
 
+  // Punto de equilibrio = costos fijos / margen. Se publica redondeado hacia
+  // arriba (clientes enteros), pero el margen de seguridad usa el valor exacto.
+  const puntoEquilibrioExacto = margen > 0 ? costosFijosMensuales / margen : null;
+  const puntoEquilibrio = puntoEquilibrioExacto === null ? null : Math.ceil(puntoEquilibrioExacto);
+
   return {
     ingresoPromedio,
     costoVariable,
@@ -160,8 +177,18 @@ export function derivados(caso: Caso): Derivados {
     costosFijosMensuales,
     inversionTotal,
     clientesPorDia: diasOperacion > 0 ? clientesActuales / diasOperacion : null,
-    // Punto de equilibrio = costos fijos / margen, redondeado hacia arriba.
-    puntoEquilibrio: margen > 0 ? Math.ceil(costosFijosMensuales / margen) : null,
+    puntoEquilibrio,
+    puntoEquilibrioExacto,
+    // Margen de seguridad = (proyectados - equilibrio) / proyectados.
+    margenSeguridad:
+      puntoEquilibrioExacto !== null && proyeccionMaxima > 0
+        ? ((proyeccionMaxima - puntoEquilibrioExacto) / proyeccionMaxima) * 100
+        : null,
+    // Holgura frente al equilibrio publicado: (proyectados - equilibrio) / equilibrio.
+    sobreEquilibrio:
+      puntoEquilibrio !== null && puntoEquilibrio > 0
+        ? ((proyeccionMaxima - puntoEquilibrio) / puntoEquilibrio) * 100
+        : null,
     proyeccionMaxima,
     clientesAnio1,
   };
@@ -254,6 +281,22 @@ export function recuperacion(serie: number[], inversion: number): number | null 
   return null;
 }
 
+/**
+ * Periodo de recuperacion descontado: el mismo metodo que la recuperacion
+ * simple, pero cada flujo mensual se trae a pesos de hoy con la tasa mensual
+ * equivalente a la TMAR: i_m = (1 + TMAR)^(1/12) - 1. El flujo del mes k
+ * (k = 1, 2, ...) se divide entre (1 + i_m)^k.
+ */
+export function recuperacionDescontada(
+  serie: number[],
+  inversion: number,
+  tasaAnual: number,
+): number | null {
+  const tasaMensual = Math.pow(1 + tasaAnual, 1 / MESES_DEL_ANIO) - 1;
+  const descontada = serie.map((flujo, i) => flujo / Math.pow(1 + tasaMensual, i + 1));
+  return recuperacion(descontada, inversion);
+}
+
 // ---------------------------------------------------------------------------
 // Evaluacion completa
 // ---------------------------------------------------------------------------
@@ -300,6 +343,7 @@ export function evaluar(caso: Caso, proyeccionAlterna?: number[]): Resultado {
 
   const serie = serieMensual(flujosMensuales, flujoAnio1, vidaUtil, crecimiento);
   const recuperacionMeses = recuperacion(serie, inversion);
+  const recuperacionDescontadaMeses = recuperacionDescontada(serie, inversion, tasa);
 
   // Tabla de flujo de caja descontado.
   let acumulado = 0;
@@ -336,6 +380,7 @@ export function evaluar(caso: Caso, proyeccionAlterna?: number[]): Resultado {
     vpn: valorPresenteNeto,
     tir: tasaInterna,
     recuperacionMeses,
+    recuperacionDescontadaMeses,
     puntoEquilibrio: d.puntoEquilibrio,
     tablaFlujo,
     saldoMensual,
@@ -389,6 +434,7 @@ export function evaluarEscenario(
     vpn: resultado.vpn,
     tir: resultado.tir,
     recuperacionMeses: resultado.recuperacionMeses,
+    recuperacionDescontadaMeses: resultado.recuperacionDescontadaMeses,
     acumuladoPorAnio,
   };
 }
@@ -663,9 +709,13 @@ export function interpretar(caso: Caso, resultado: Resultado): Interpretacion {
     const meses = resultado.recuperacionMeses;
     const mesCalendario = Math.ceil(meses);
     parrafos.push(
-      `La inversión se recupera a los ${num(meses, 1)} meses, es decir, durante el mes ${num(mesCalendario)} ` +
-        `de operación: en ese momento el dinero acumulado por la ampliación iguala los ` +
-        `${dinero(d.inversionTotal)} invertidos.`,
+      `La inversión se recupera a los ${num(meses, 1)} meses (recuperación simple), es decir, durante ` +
+        `el mes ${num(mesCalendario)} de operación: en ese momento el dinero acumulado por la ampliación ` +
+        `iguala los ${dinero(d.inversionTotal)} invertidos.` +
+        (resultado.recuperacionDescontadaMeses === null
+          ? " Con los flujos descontados a la tasa de evaluación, la inversión no se recupera dentro del horizonte."
+          : ` Si cada flujo mensual se descuenta a la tasa de evaluación, la recuperación descontada es de ` +
+            `${num(resultado.recuperacionDescontadaMeses, 1)} meses.`),
     );
   }
 
@@ -678,14 +728,14 @@ export function interpretar(caso: Caso, resultado: Resultado): Interpretacion {
   } else {
     const maximo = d.proyeccionMaxima;
     const holgura = maximo - d.puntoEquilibrio;
-    const porcentajeHolgura = d.puntoEquilibrio > 0 ? (holgura / d.puntoEquilibrio) * 100 : 0;
     if (holgura >= 0) {
       parrafos.push(
         `El punto de equilibrio es de ${num(d.puntoEquilibrio)} clientes adicionales al mes: por debajo ` +
           `de esa cifra la ampliación no cubre sus propios costos fijos de ${dinero(d.costosFijosMensuales)} ` +
-          `al mes. La proyección llega a ${num(maximo)} clientes adicionales, es decir, ` +
-          `${num(porcentajeHolgura, 1)} % por encima del punto de equilibrio: ese es el margen de seguridad ` +
-          `del proyecto frente a una demanda menor a la esperada.`,
+          `al mes. La proyección llega a ${num(maximo)} clientes adicionales, ` +
+          `${num(d.sobreEquilibrio ?? 0, 1)} % por encima del equilibrio. El margen de seguridad es del ` +
+          `${num(d.margenSeguridad ?? 0, 1)} %: los clientes proyectados podrían caer hasta esa proporción ` +
+          `antes de que la ampliación deje de cubrir sus costos.`,
       );
     } else {
       parrafos.push(

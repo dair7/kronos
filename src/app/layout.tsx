@@ -1,13 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import { Geist } from "next/font/google";
+import { Manrope } from "next/font/google";
 import "./globals.css";
 import { ProveedorCaso } from "@/components/ProveedorCaso";
-import { Encabezado } from "@/components/Encabezado";
-import { PieDePagina } from "@/components/PieDePagina";
+import { Marco } from "@/components/Marco";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const manrope = Manrope({
+  variable: "--font-manrope",
   subsets: ["latin"],
   display: "swap",
 });
@@ -22,19 +21,15 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#12263c",
+  themeColor: "#f4f4f5",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es" className={`${geistSans.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col bg-lienzo">
+    <html lang="es" className={`${manrope.variable} h-full antialiased`}>
+      <body className="min-h-full bg-fondo">
         <ProveedorCaso>
-          <Encabezado />
-          <main id="contenido" className="flex-1">
-            {children}
-          </main>
-          <PieDePagina />
+          <Marco>{children}</Marco>
         </ProveedorCaso>
       </body>
     </html>

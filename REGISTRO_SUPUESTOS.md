@@ -203,9 +203,16 @@ Estas son limitaciones conscientes de un prototipo académico:
 | Flujo del año 10 (con salvamento) | $20.631.826 |
 | **VPN** | **$57.999.490** |
 | **TIR** | **171,6 %** |
-| **Periodo de recuperación** | **9,47 meses** (durante el mes 10) |
-| **Punto de equilibrio** | **269 clientes adicionales/mes** |
-| Margen de seguridad | 48,7 % por encima del punto de equilibrio |
+| **Recuperación simple** | **9,47 meses** (durante el mes 10) |
+| **Recuperación descontada** | **10,07 meses** (flujos mensuales descontados a la TMAR) |
+| **Punto de equilibrio** | **269 clientes adicionales/mes** (268,97 sin redondear) |
+| **Margen de seguridad** | **32,8 %** = (400 − 268,97) ÷ 400 |
+| Proyección frente al equilibrio | 48,7 % por encima del equilibrio = (400 − 269) ÷ 269 |
+
+El **margen de seguridad** mide cuánto pueden caer los clientes proyectados antes de que la
+ampliación deje de cubrir sus costos: (clientes proyectados − equilibrio) ÷ clientes proyectados.
+Se calcula con el equilibrio sin redondear. El 48,7 % es otro dato —cuánto supera la proyección al
+equilibrio, medido sobre el equilibrio— y no debe llamarse margen de seguridad.
 
 ### Sobre la magnitud de la TIR
 
@@ -216,11 +223,11 @@ el **punto de equilibrio**, que son menos sensibles al tamaño de la inversión.
 
 ### Escenarios evaluados
 
-| Escenario | Clientes/mes | VPN | TIR | Recuperación |
-|---|---|---|---|---|
-| A — Conservador | 250 | −$64.127.764 | No existe | No se recupera |
-| B — Esperado | 400 | $57.999.490 | 171,6 % | 9,5 meses |
-| C — Expansión | 500 | $139.578.564 | 378,3 % | 6,2 meses |
+| Escenario | Clientes/mes | VPN | TIR | Recuperación simple | Recuperación descontada |
+|---|---|---|---|---|---|
+| A — Conservador | 250 | −$64.127.764 | No existe | No se recupera | No se recupera |
+| B — Esperado | 400 | $57.999.490 | 171,6 % | 9,5 meses | 10,1 meses |
+| C — Expansión | 500 | $139.578.564 | 378,3 % | 6,2 meses | 6,4 meses |
 
 El escenario A queda por debajo del punto de equilibrio de 269 clientes, de modo que todos sus
 flujos son negativos. Al no haber cambio de signo en la serie de flujos, la TIR no está definida

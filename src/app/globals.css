@@ -2,60 +2,43 @@
 
 /* ==========================================================================
    SISTEMA DE DISENO DE KRONOS
-   Una sola paleta (azul marino + acento dorado), una tipografia y una escala
-   de espaciados. Ningun componente define colores por fuera de estos tokens.
+   Fondo gris claro, tarjetas blancas sin borde y colores con significado:
+   - negro: texto, botones principales y seleccion activa
+   - verde: ingresos, valores positivos y "Conveniente"
+   - rojo: SOLO valores negativos y la inversion del anio 0
+   - gris (liso o rayado): costos y datos de contexto
+   - naranja: acento UNICO, el dato clave de cada grafica y el paso activo
+   Ningun componente define colores por fuera de estos tokens.
    ========================================================================== */
 
 @theme {
-  /* Azul marino: color institucional, jerarquia y encabezados */
-  --color-marino-50: #f2f6fa;
-  --color-marino-100: #e2eaf3;
-  --color-marino-200: #c3d4e6;
-  --color-marino-300: #94b1cf;
-  --color-marino-400: #5e86b0;
-  --color-marino-500: #3b6694;
-  --color-marino-600: #2b4f77;
-  --color-marino-700: #234060;
-  --color-marino-800: #1b3250;
-  --color-marino-900: #12263c;
-  --color-marino-950: #0a1826;
+  --color-fondo: #f4f4f5;
+  --color-tarjeta: #ffffff;
+  --color-tinta: #0f0f10;
+  --color-tenue: #71717a;
+  --color-linea: #e4e4e7;
 
-  /* Dorado: acento unico, reservado para enfasis y elementos activos */
-  --color-dorado-50: #fdf9ed;
-  --color-dorado-100: #f8efcd;
-  --color-dorado-200: #f0dc97;
-  --color-dorado-300: #e5c45f;
-  --color-dorado-400: #d9ad38;
-  --color-dorado-500: #c9972a;
-  --color-dorado-600: #a87520;
-  --color-dorado-700: #85581d;
+  /* Gris de contexto (costos, datos de referencia) y su version oscura */
+  --color-contexto: #d4d4d8;
+  --color-contexto-oscuro: #52525b;
 
-  /* Semaforo de resultados */
-  --color-exito-50: #f0fdf4;
-  --color-exito-200: #bbf7d0;
-  --color-exito-600: #16a34a;
-  --color-exito-700: #15803d;
-  --color-exito-900: #14532d;
+  --color-positivo: #16a34a;
+  --color-positivo-suave: #dcfce7;
+  --color-positivo-texto: #15803d;
 
-  --color-alerta-50: #fffbeb;
-  --color-alerta-200: #fde68a;
-  --color-alerta-700: #b45309;
-  --color-alerta-900: #78350f;
+  --color-negativo: #dc2626;
+  --color-negativo-suave: #fee2e2;
+  --color-negativo-texto: #b91c1c;
 
-  --color-peligro-50: #fef2f2;
-  --color-peligro-200: #fecaca;
-  --color-peligro-600: #dc2626;
-  --color-peligro-700: #b91c1c;
-  --color-peligro-900: #7f1d1d;
+  --color-acento: #f97316;
 
-  /* Neutros de superficie */
-  --color-lienzo: #f5f6f8;
-  --color-superficie: #ffffff;
-  --color-borde: #dbe1e8;
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, "Segoe UI", sans-serif;
 
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --radius-tarjeta: 20px;
+  --radius-campo: 12px;
 
-  --radius-tarjeta: 0.75rem;
+  --shadow-tarjeta: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-flotante: 0 12px 32px -8px rgba(15, 15, 16, 0.18), 0 2px 6px rgba(15, 15, 16, 0.06);
 }
 
 /* --------------------------------------------------------------------------
@@ -63,30 +46,29 @@
    -------------------------------------------------------------------------- */
 
 html {
-  /* Evita el scroll horizontal de la pagina en cualquier ancho (requisito
-     de la guia: el software debe verse bien desde 390 px). */
+  /* Nunca hay scroll horizontal de la pagina, en ningun ancho. */
   overflow-x: hidden;
   scroll-behavior: smooth;
 }
 
 body {
-  background-color: var(--color-lienzo);
-  color: var(--color-marino-900);
+  background-color: var(--color-fondo);
+  color: var(--color-tinta);
   font-family: var(--font-sans);
+  font-size: 14px;
   -webkit-text-size-adjust: 100%;
 }
 
-/* Las cifras se alinean en columna en tablas y KPIs */
+/* Las cifras se alinean en columna y se compactan un poco */
 .cifra {
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 /* Foco visible en todo elemento interactivo (accesibilidad) */
-:where(a, button, input, select, textarea, [tabindex]):focus-visible {
-  outline: 3px solid var(--color-dorado-400);
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-tinta);
   outline-offset: 2px;
-  border-radius: 0.375rem;
 }
 
 /* Altura minima de 44 px en controles tactiles */
@@ -104,6 +86,24 @@ input[type="number"]::-webkit-inner-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
+}
+
+/* Fila deslizable horizontal sin barra visible (indicadores en celular) */
+.sin-barra {
+  scrollbar-width: none;
+}
+.sin-barra::-webkit-scrollbar {
+  display: none;
+}
+
+/* Relleno gris rayado para barras de contexto fuera de Recharts */
+.rayado {
+  background-color: var(--color-linea);
+  background-image: repeating-linear-gradient(
+    135deg,
+    var(--color-contexto) 0 2px,
+    transparent 2px 6px
+  );
 }
 
 /* --------------------------------------------------------------------------
@@ -125,8 +125,34 @@ input[type="number"] {
   animation: aparecer 180ms ease-out both;
 }
 
+@keyframes entrar-derecha {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes aparecer-fondo {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Panel lateral que entra desde la derecha ("¿Como leer?") */
+.entrar-derecha {
+  animation: entrar-derecha 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.aparecer-fondo {
+  animation: aparecer-fondo 200ms ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .aparecer {
+  .aparecer,
+  .entrar-derecha,
+  .aparecer-fondo {
     animation: none;
   }
   html {
@@ -135,8 +161,8 @@ input[type="number"] {
 }
 
 /* --------------------------------------------------------------------------
-   Impresion / Guardar en PDF
-   Oculta navegacion, encabezado y botones; deja solo el informe.
+   Impresion / Exportar PDF
+   Oculta el menu lateral y los controles; deja solo el informe.
    -------------------------------------------------------------------------- */
 
 @media print {
@@ -146,8 +172,7 @@ input[type="number"] {
 
   body {
     background: #fff;
-    color: #000;
-    font-size: 11pt;
+    font-size: 10pt;
   }
 
   .solo-impresion {
@@ -160,17 +185,27 @@ input[type="number"] {
   }
 
   .tarjeta-impresion {
-    border: 1px solid #999 !important;
     box-shadow: none !important;
+    border: 1px solid var(--color-linea) !important;
   }
 
-  /* Las tablas de resultados no deben quedar con scroll al imprimir */
+  /* El contenido ocupa todo el ancho de la hoja */
+  .contenido-principal {
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+
   .desplazable-x {
     overflow: visible !important;
   }
 
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
   @page {
-    margin: 1.5cm;
+    margin: 1.2cm;
   }
 }
 

@@ -31,9 +31,10 @@ conoce la lógica, la lógica conoce los datos, y nunca al revés.
 │  ├── app/page.tsx              Bienvenida                   │
 │  ├── app/evaluar/              6 pantallas de captura        │
 │  ├── app/resultados/           Dashboard de 2 pestañas       │
+│  ├── components/Marco.tsx      Menú lateral / barra superior │
 │  ├── components/ui/            Sistema de diseño reutilizable│
 │  ├── components/pantallas/     Formularios de captura        │
-│  └── components/dashboard/     KPIs, gráficas, tablas        │
+│  └── components/dashboard/     Indicadores, gráficas, tablas │
 └──────────────────────────┬──────────────────────────────────┘
                            │  llama funciones puras
                            ▼
@@ -44,6 +45,7 @@ conoce la lógica, la lógica conoce los datos, y nunca al revés.
 │  ├── Cálculos económicos derivados(), vpn(), tir()           │
 │  ├── Proyecciones        evaluar(), serieMensual()           │
 │  │                       recuperacion()                      │
+│  │                       recuperacionDescontada()            │
 │  ├── Escenarios          proyeccionEscenario()               │
 │  │                       evaluarEscenario()                  │
 │  └── Interpretación      interpretar()                       │
@@ -78,6 +80,11 @@ almacenamiento del navegador, `src/lib/almacen.ts` lo expone como un **almacén 
 componentes consumen con `useSyncExternalStore`: durante el renderizado del servidor y la
 hidratación se usa el caso por defecto, y en cuanto hay navegador se cambia por lo que el usuario
 tenga guardado. Esto evita los errores de hidratación sin leer `localStorage` dentro de un efecto.
+
+`ProveedorCaso` también guarda, solo en memoria, los **pasos revisados**: un paso con datos
+faltantes se muestra como *pendiente* (círculo gris) hasta que el usuario intenta avanzar desde él
+con «Siguiente» o entra a Resultados; desde entonces se marca en rojo. La regla está en
+`components/estadoPasos.ts`.
 
 ---
 
@@ -237,7 +244,7 @@ Si los flujos **no cambian de signo** no existe TIR, la función devuelve `null`
 muestra «No existe». Es lo que ocurre en el escenario conservador de Espitia: con 250 clientes
 adicionales todos los flujos son negativos.
 
-### 4.5 Periodo de recuperación
+### 4.5 Periodo de recuperación (simple y descontado)
 
 Se construye una serie mensual para todo el horizonte: los doce meses reales del año 1 y, a partir
 del año 2, cada flujo anual repartido en doce meses iguales. **No incluye el valor de salvamento**,
@@ -252,7 +259,19 @@ recuperación = i + (inversión − acumulado anterior) ÷ flujo del mes i
 
 Si el acumulado nunca alcanza la inversión devuelve `null` y se muestra «No se recupera en el
 periodo evaluado». Se presenta en meses con un decimal («9,5 meses») e indicando el mes calendario
-en que ocurre («durante el mes 10»). Por encima de 24 meses se muestra en años.
+en que ocurre («durante el mes 10»). Por encima de 24 meses se muestra en años. En la interfaz se
+rotula **«Recuperación simple»**.
+
+La **recuperación descontada** (`recuperacionDescontada()`) usa el mismo método sobre la serie
+mensual descontada con la tasa mensual equivalente a la TMAR:
+
+```
+i_m = (1 + TMAR)^(1/12) − 1
+flujo descontado del mes k = flujo del mes k ÷ (1 + i_m)^k        (k = 1, 2, …)
+```
+
+En el caso Espitia da 10,07 meses, frente a 9,47 de la simple. Se muestra debajo del indicador de
+recuperación y en la tabla de escenarios.
 
 ### 4.6 Punto de equilibrio
 
@@ -262,6 +281,15 @@ punto de equilibrio = ⌈ costos fijos mensuales ÷ margen por cliente ⌉
 
 Redondeado hacia arriba, porque medio cliente no cubre medio costo. Si el margen es menor o igual a
 cero devuelve `null`: cada cliente adicional costaría más de lo que deja.
+
+El **margen de seguridad** usa el equilibrio sin redondear (`puntoEquilibrioExacto`):
+
+```
+margen de seguridad = (clientes proyectados − equilibrio exacto) ÷ clientes proyectados
+```
+
+En Espitia: (400 − 268,97) ÷ 400 = 32,8 %. Aparte se informa cuánto supera la proyección al
+equilibrio, (400 − 269) ÷ 269 = 48,7 %, que **no** es el margen de seguridad.
 
 ### 4.7 Escenarios
 
@@ -317,12 +345,12 @@ corregir». Los mensajes dicen qué falta y por qué hace falta, no códigos té
 
 ## 6. Pruebas
 
-`tests/validacion-espitia.test.ts` ejecuta 29 pruebas con Vitest. Verifica, con el caso real:
+`tests/validacion-espitia.test.ts` ejecuta 31 pruebas con Vitest. Verifica, con el caso real:
 
 - Los valores derivados: inversión, ingreso promedio, costo variable, margen, costos fijos, punto de
-  equilibrio y clientes por día.
+  equilibrio (269 publicado, 268,97 exacto), margen de seguridad (32,8 %) y clientes por día.
 - El flujo de caja: años 0, 1, 2 y 10, y que la tabla descontada cierre exactamente en el VPN.
-- Los indicadores: VPN, TIR y periodo de recuperación.
+- Los indicadores: VPN, TIR, recuperación simple (9,47 meses) y recuperación descontada (10,07 meses).
 - Los tres escenarios, incluido que el conservador no tenga TIR ni recuperación y que el esperado
   coincida con el caso base.
 - Las validaciones de tasa negativa, vida útil 0, inversión vacía, meses sin clientes y clientes
@@ -334,31 +362,43 @@ npm test
 
 ---
 
-## 7. Diseño responsive
+## 7. Diseño de la interfaz y responsive
+
+**Sistema de diseño** (`src/app/globals.css`, tokens en `@theme`): fondo gris claro `#F4F4F5`,
+tarjetas blancas sin borde (radio de 20 px), tipografía Manrope y colores con significado: negro
+para texto, botones y selección; verde para ingresos y valores positivos; rojo **solo** para valores
+negativos y la inversión del año 0; gris (liso o rayado) para costos y contexto; y naranja como
+acento único, a lo sumo un elemento por gráfica (el dato clave) y el paso activo del menú.
+
+**Formato de cifras**: todo pasa por `lib/formato.ts`. Los pesos se muestran sin espacio después del
+signo (`$8.300.000`), los decimales con coma, el `%` unido a la cifra con un espacio duro y los ejes
+de las gráficas con valores redondos (`escalaRedonda()` y `pesosEje()`: 0, 10, 20, 30 M). Los campos
+de dinero y cantidades muestran puntos de miles mientras se escribe y guardan el número limpio.
 
 | Ancho | Comportamiento |
 |---|---|
-| 390 px (celular) | KPIs en 2 columnas. Las tablas editables se convierten en tarjetas apiladas con la etiqueta de cada campo. Las barras de pasos y de acciones se desplazan horizontalmente dentro de su contenedor. |
-| 768 px (tablet) | KPIs en 3 columnas. Las tablas editables vuelven a su forma de tabla con encabezados. |
-| 1366 px (computador) | KPIs en 6 columnas. Las gráficas se organizan en dos columnas. |
+| 390 px (celular) | Barra superior con el nombre del caso y menú en panel. Dashboard en una columna: la tarjeta del VPN primero y los indicadores en una fila deslizable. La tabla de flujo se desliza con la columna «Año» fija y la franja del VPN fuera del desplazamiento; la comparación de escenarios pasa a una lista por indicador. Las tablas editables se convierten en tarjetas compactas con una X para eliminar; la proyección queda en una fila por mes. «Valores calculados» va antes de los botones Anterior / Siguiente. |
+| 768 px (tablet) | Menú lateral de solo íconos. Las filas del dashboard pasan a 2 columnas donde caben; las tablas editables vuelven a su forma de tabla. |
+| 1366 px (computador) | Menú lateral completo de 240 px y cuadrícula de 12 columnas. Las dos primeras filas del dashboard caben en 1366 × 768 sin desplazarse. |
 
 `html { overflow-x: hidden }` garantiza que la página nunca tenga scroll horizontal. Las tablas de
 resultados, que sí necesitan ancho, se desplazan **dentro de su propio contenedor**
 (`.desplazable-x`). Todas las gráficas van en `ResponsiveContainer`, por lo que se ajustan al ancho
 disponible.
 
-Accesibilidad: todos los campos tienen etiqueta asociada, los controles miden al menos 44 px de
-alto, el foco es visible con un contorno dorado de 3 px, hay un enlace «Saltar al contenido» y las
-pestañas usan `role="tab"` con `aria-selected`.
+Accesibilidad: todos los campos tienen etiqueta asociada (la unidad se lee también por lector de
+pantalla), los controles miden al menos 40–44 px de alto, el foco es visible, hay un enlace «Saltar
+al contenido», el selector Resultado | Escenarios usa `role="tab"` con `aria-selected` y los paneles
+(menú en celular, «¿Cómo leer?») se cierran con Esc.
 
 ---
 
 ## 8. Impresión
 
-El botón «Imprimir o guardar en PDF» llama a `window.print()`. La hoja de estilos de impresión
-(`src/app/globals.css`) oculta todo lo marcado con `.sin-impresion` —encabezado, navegación,
-pestañas y botones—, muestra el bloque `.solo-impresion` con el nombre del caso, evita que las
-tarjetas se partan entre páginas y expande las tablas que en pantalla tienen scroll.
+El botón «Exportar PDF» llama a `window.print()`. La hoja de estilos de impresión
+(`src/app/globals.css`) oculta todo lo marcado con `.sin-impresion` —menú lateral, selector y
+botones—, quita el margen del menú, despliega la interpretación completa, evita que las tarjetas se
+partan entre páginas y expande las tablas que en pantalla tienen scroll.
 
 ---
 

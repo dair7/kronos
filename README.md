@@ -3,9 +3,9 @@
 **Herramienta web para evaluar económicamente proyectos de inversión de pequeños negocios.**
 
 KRONOS toma los datos de un negocio y de la inversión que quiere hacer, arma el flujo de caja del
-proyecto y responde con indicadores de Ingeniería Económica —VPN, TIR, periodo de recuperación y
-punto de equilibrio— presentados en un dashboard con gráficas, supuestos visibles y una
-interpretación en palabras.
+proyecto y responde con indicadores de Ingeniería Económica —VPN, TIR, recuperación simple y
+descontada, punto de equilibrio y margen de seguridad— presentados en un dashboard con gráficas,
+supuestos visibles y una interpretación en palabras.
 
 > Trabajo Colaborativo Contextualizado · Ingeniería Económica · Programa de Ingeniería de Software.
 
@@ -69,14 +69,16 @@ archivo, lo que hace la herramienta portable y gratuita de desplegar.
 │   ├── lib/                     Capa de datos y lógica (sin React)
 │   │   ├── datos.ts             Tipos del caso, caso Espitia, caso de ejemplo,
 │   │   │                        caso vacío y validación de archivos .json
-│   │   ├── calculos.ts          Validaciones, derivados, VPN, TIR, recuperación,
-│   │   │                        punto de equilibrio, escenarios e interpretación
-│   │   ├── formato.ts           Pesos colombianos, porcentajes y periodos
+│   │   ├── calculos.ts          Validaciones, derivados, VPN, TIR, recuperación
+│   │   │                        simple y descontada, punto de equilibrio, margen
+│   │   │                        de seguridad, escenarios e interpretación
+│   │   ├── formato.ts           Pesos colombianos, porcentajes, periodos y ejes
 │   │   └── almacen.ts           Persistencia en el navegador
 │   ├── components/              Capa de interfaz
+│   │   ├── Marco.tsx            Menú lateral (barra superior en celular)
 │   │   ├── ui/                  Componentes reutilizables del sistema de diseño
 │   │   ├── pantallas/           Las seis pantallas de captura de datos
-│   │   └── dashboard/           KPIs, gráficas, tablas e interpretación
+│   │   └── dashboard/           Indicadores, gráficas, tablas e interpretación
 │   └── app/                     Páginas (App Router)
 │       ├── page.tsx             Bienvenida
 │       ├── evaluar/             Captura de datos por pasos
@@ -121,8 +123,9 @@ npm test
 
 Las pruebas cargan el caso real de Espitia Barber Shop y verifican que el modelo produzca
 exactamente los valores documentados en `REGISTRO_SUPUESTOS.md`: inversión de $8.300.000, flujo del
-año 1 de $13.912.500, VPN de $57.999.490, TIR de 171,6 %, recuperación a los 9,47 meses y punto de
-equilibrio de 269 clientes adicionales al mes. También comprueban los tres escenarios de
+año 1 de $13.912.500, VPN de $57.999.490, TIR de 171,6 %, recuperación simple a los 9,47 meses,
+recuperación descontada a los 10,07 meses, punto de equilibrio de 269 clientes adicionales al mes y
+margen de seguridad del 32,8 %. También comprueban los tres escenarios de
 comparación y las validaciones de datos.
 
 Para dejarlas corriendo mientras se edita el código:

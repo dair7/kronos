@@ -42,6 +42,15 @@ interface ContextoCaso {
    *  enviar al usuario directamente a la pantalla que tiene errores. */
   pasoActivo: Pantalla;
   setPasoActivo: (paso: Pantalla) => void;
+  /**
+   * Pasos cuyos errores ya se le muestran al usuario. Un paso con datos
+   * faltantes se ve como "pendiente" (gris) hasta que el usuario intenta
+   * avanzar con "Siguiente" desde el o entra a Resultados; solo entonces se
+   * marca en rojo.
+   */
+  pasosRevisados: ReadonlySet<Pantalla>;
+  revisarPaso: (paso: Pantalla) => void;
+  revisarTodos: () => void;
   /** false mientras se renderiza en el servidor o durante la hidratacion. */
   montado: boolean;
   /** Modifica el caso con una funcion que recibe una copia editable. */
@@ -61,6 +70,25 @@ export function ProveedorCaso({ children }: { children: ReactNode }) {
   const caso = useSyncExternalStore(suscribir, obtenerCaso, obtenerCasoDelServidor);
   const montado = useSyncExternalStore(...argumentosMontado);
   const [pasoActivo, setPasoActivo] = useState<Pantalla>("negocio");
+  const [pasosRevisados, setPasosRevisados] = useState<ReadonlySet<Pantalla>>(() => new Set());
+
+  const revisarPaso = useCallback(
+    (paso: Pantalla) =>
+      setPasosRevisados((actual) => (actual.has(paso) ? actual : new Set(actual).add(paso))),
+    [],
+  );
+  const revisarTodos = useCallback(
+    () =>
+      setPasosRevisados(
+        new Set<Pantalla>(["negocio", "servicios", "inversion", "personal", "proyeccion", "parametros"]),
+      ),
+    [],
+  );
+  // Al cargar o crear otro caso, la revision empieza de nuevo.
+  const cambiarCaso = useCallback((nuevo: Caso) => {
+    setPasosRevisados(new Set());
+    guardarCaso(nuevo);
+  }, []);
 
   const actualizar = useCallback((cambio: (borrador: Caso) => void) => {
     const borrador = clonarCaso(obtenerCaso());
@@ -87,9 +115,9 @@ export function ProveedorCaso({ children }: { children: ReactNode }) {
     const texto = await archivo.text();
     const resultado = validarArchivo(texto);
     if (!resultado.ok) return resultado.error;
-    guardarCaso(resultado.valor);
+    cambiarCaso(resultado.valor);
     return null;
-  }, []);
+  }, [cambiarCaso]);
 
   const valor = useMemo<ContextoCaso>(
     () => ({
@@ -97,15 +125,30 @@ export function ProveedorCaso({ children }: { children: ReactNode }) {
       montado,
       pasoActivo,
       setPasoActivo,
+      pasosRevisados,
+      revisarPaso,
+      revisarTodos,
       actualizar,
       reemplazar,
-      cargarEspitia: () => guardarCaso(clonarCaso(CASO_ESPITIA)),
-      cargarPanaderia: () => guardarCaso(clonarCaso(CASO_PANADERIA)),
-      nuevoCaso: () => guardarCaso(casoVacio()),
+      cargarEspitia: () => cambiarCaso(clonarCaso(CASO_ESPITIA)),
+      cargarPanaderia: () => cambiarCaso(clonarCaso(CASO_PANADERIA)),
+      nuevoCaso: () => cambiarCaso(casoVacio()),
       guardarArchivo,
       abrirArchivo,
     }),
-    [caso, montado, pasoActivo, actualizar, reemplazar, guardarArchivo, abrirArchivo],
+    [
+      caso,
+      montado,
+      pasoActivo,
+      pasosRevisados,
+      revisarPaso,
+      revisarTodos,
+      cambiarCaso,
+      actualizar,
+      reemplazar,
+      guardarArchivo,
+      abrirArchivo,
+    ],
   );
 
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;

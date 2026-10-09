@@ -1,15 +1,25 @@
+import type { ComponentType } from "react";
 import type { Pantalla } from "@/lib/datos";
+import {
+  IconoInversion,
+  IconoNegocio,
+  IconoParametros,
+  IconoPersonal,
+  IconoProyeccion,
+  IconoServicios,
+} from "./ui/Iconos";
 
 export interface DefinicionPaso {
   id: Pantalla;
-  /** Nombre corto para la barra de pasos. */
+  /** Nombre corto para el menu lateral. */
   titulo: string;
   /** Titulo largo para el encabezado de la pantalla. */
   tituloLargo: string;
   descripcion: string;
+  icono: ComponentType<{ tamano?: number; className?: string }>;
 }
 
-/** Orden de las pantallas de captura. La barra de pasos lo usa tal cual. */
+/** Orden de las pantallas de captura. El menu lateral lo usa tal cual. */
 export const PASOS: DefinicionPaso[] = [
   {
     id: "negocio",
@@ -17,6 +27,7 @@ export const PASOS: DefinicionPaso[] = [
     tituloLargo: "Información del negocio",
     descripcion:
       "Cómo opera el negocio hoy. Con estos datos se calcula cuánto deja en promedio cada cliente.",
+    icono: IconoNegocio,
   },
   {
     id: "servicios",
@@ -24,12 +35,14 @@ export const PASOS: DefinicionPaso[] = [
     tituloLargo: "Catálogo de servicios",
     descripcion:
       "Los servicios que presta el negocio y sus precios. Es información de contexto: no entra en los cálculos.",
+    icono: IconoServicios,
   },
   {
     id: "inversion",
     titulo: "Inversión",
     tituloLargo: "Inversión inicial",
     descripcion: "Todo lo que hay que comprar o adecuar para poner en marcha el proyecto.",
+    icono: IconoInversion,
   },
   {
     id: "personal",
@@ -37,6 +50,7 @@ export const PASOS: DefinicionPaso[] = [
     tituloLargo: "Personal y costos",
     descripcion:
       "Los costos que aparecen con la inversión: salarios, prestaciones, servicios públicos e insumos.",
+    icono: IconoPersonal,
   },
   {
     id: "proyeccion",
@@ -44,6 +58,7 @@ export const PASOS: DefinicionPaso[] = [
     tituloLargo: "Proyección de clientes",
     descripcion:
       "Cuántos clientes adicionales espera atender cada mes durante el primer año de operación.",
+    icono: IconoProyeccion,
   },
   {
     id: "parametros",
@@ -51,6 +66,7 @@ export const PASOS: DefinicionPaso[] = [
     tituloLargo: "Parámetros de evaluación económica",
     descripcion:
       "El horizonte, la rentabilidad mínima exigida y los demás supuestos con los que se evalúa el proyecto.",
+    icono: IconoParametros,
   },
 ];
 

@@ -2,9 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { useCaso } from "@/components/ProveedorCaso";
-import { TourGuiado } from "@/components/TourGuiado";
-import { EnlaceBoton } from "@/components/ui/Boton";
+import { Boton } from "@/components/ui/Boton";
 import { Aviso } from "@/components/ui/Aviso";
+import { IconoDescargar } from "@/components/ui/Iconos";
+import { SelectorPildora } from "@/components/ui/SelectorPildora";
+import { ComoLeer } from "@/components/dashboard/ComoLeer";
 import { ListaErrores } from "@/components/dashboard/ListaErrores";
 import { PestanaResultado } from "@/components/dashboard/PestanaResultado";
 import { PestanaEscenarios } from "@/components/dashboard/PestanaEscenarios";
@@ -14,7 +16,7 @@ type Pestana = "resultado" | "escenarios";
 
 const PESTANAS: { id: Pestana; titulo: string }[] = [
   { id: "resultado", titulo: "Resultado" },
-  { id: "escenarios", titulo: "Comparar escenarios" },
+  { id: "escenarios", titulo: "Escenarios" },
 ];
 
 export default function PaginaResultados() {
@@ -29,11 +31,7 @@ export default function PaginaResultados() {
   );
 
   if (!montado) {
-    return (
-      <div className="mx-auto max-w-7xl px-4 py-10">
-        <p className="text-sm text-marino-500">Calculando los resultados…</p>
-      </div>
-    );
+    return <p className="py-10 text-sm text-tenue">Calculando los resultados…</p>;
   }
 
   // Con datos incompletos no se calcula: se muestra qué falta y dónde corregirlo.
@@ -41,69 +39,48 @@ export default function PaginaResultados() {
     return <ListaErrores errores={errores} />;
   }
 
+  const subtitulo = [caso.inversion.descripcion, caso.negocio.ubicacion].filter(Boolean).join(" · ");
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:py-8">
-      <header className="sin-impresion mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <header className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold text-marino-900 sm:text-2xl">
-            Resultados de la evaluación
-          </h1>
-          <p className="mt-1 text-sm text-marino-600">
+          <h1 className="truncate text-[24px] leading-tight font-bold tracking-[-0.01em]">
             {caso.negocio.nombre}
-            {caso.negocio.ubicacion && ` · ${caso.negocio.ubicacion}`}
-          </p>
+          </h1>
+          {subtitulo && <p className="mt-0.5 truncate text-sm font-medium text-tenue">{subtitulo}</p>}
         </div>
-        <EnlaceBoton href="/evaluar" variante="secundario" tamano="pequeno">
-          ← Volver a los datos
-        </EnlaceBoton>
+        <div className="sin-impresion flex flex-wrap items-center gap-2">
+          <SelectorPildora
+            etiqueta="Vistas del dashboard"
+            opciones={PESTANAS}
+            valor={pestana}
+            onCambiar={setPestana}
+          />
+          <ComoLeer />
+          <Boton onClick={() => window.print()}>
+            <IconoDescargar tamano={16} />
+            Exportar PDF
+          </Boton>
+        </div>
       </header>
 
-      <div className="sin-impresion mb-5 space-y-4">
-        <TourGuiado />
-        {avisos.map((aviso) => (
-          <Aviso key={aviso} tono="alerta" titulo="Advertencia sobre los datos">
-            {aviso}
-          </Aviso>
-        ))}
-      </div>
-
-      {/* Pestañas */}
-      <div
-        role="tablist"
-        aria-label="Vistas del dashboard"
-        className="sin-impresion -mx-4 flex gap-2 overflow-x-auto border-b border-borde px-4 sm:mx-0 sm:px-0"
-      >
-        {PESTANAS.map((item) => {
-          const activa = item.id === pestana;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              role="tab"
-              id={`pestana-${item.id}`}
-              aria-selected={activa}
-              aria-controls={`panel-${item.id}`}
-              onClick={() => setPestana(item.id)}
-              className={[
-                "control-tactil shrink-0 cursor-pointer border-b-2 px-4 text-sm font-medium",
-                "transition-colors duration-150",
-                activa
-                  ? "border-dorado-400 text-marino-900"
-                  : "border-transparent text-marino-500 hover:text-marino-800",
-              ].join(" ")}
-            >
-              {item.titulo}
-            </button>
-          );
-        })}
-      </div>
+      {avisos.length > 0 && (
+        <div className="sin-impresion mb-4 space-y-2">
+          {avisos.map((aviso) => (
+            <Aviso key={aviso} tono="alerta" titulo="Advertencia sobre los datos">
+              {aviso}
+            </Aviso>
+          ))}
+        </div>
+      )}
 
       <div
         key={pestana}
         role="tabpanel"
         id={`panel-${pestana}`}
         aria-labelledby={`pestana-${pestana}`}
-        className="aparecer mt-6"
+        className="aparecer"
       >
         {pestana === "resultado" ? (
           <PestanaResultado caso={caso} resultado={resultado} />

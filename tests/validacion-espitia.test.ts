@@ -42,6 +42,13 @@ describe("Caso Espitia Barber Shop — valores derivados", () => {
 
   it("el punto de equilibrio es de 269 clientes adicionales al mes", () => {
     expect(d.puntoEquilibrio).toBe(269);
+    expect(d.puntoEquilibrioExacto as number).toBeCloseTo(268.97, 2);
+  });
+
+  it("el margen de seguridad es 32,8 % ((400 - 268,97) / 400)", () => {
+    expect(d.margenSeguridad as number).toBeCloseTo(32.76, 2);
+    // La holgura frente al equilibrio (48,7 %) es otro dato, no el margen de seguridad.
+    expect(d.sobreEquilibrio as number).toBeCloseTo(48.7, 1);
   });
 
   it("la proyeccion del anio 1 suma 4.050 clientes adicionales", () => {
@@ -87,6 +94,12 @@ describe("Caso Espitia Barber Shop — flujo de caja e indicadores", () => {
     expect(r.recuperacionMeses).not.toBeNull();
     expect(r.recuperacionMeses as number).toBeCloseTo(9.47, 2);
     expect(Math.ceil(r.recuperacionMeses as number)).toBe(10);
+  });
+
+  it("la recuperacion descontada (tasa mensual (1,20)^(1/12) - 1) es de 10,07 meses", () => {
+    expect(r.recuperacionDescontadaMeses).not.toBeNull();
+    expect(r.recuperacionDescontadaMeses as number).toBeCloseTo(10.07, 2);
+    expect(r.recuperacionDescontadaMeses as number).toBeGreaterThan(r.recuperacionMeses as number);
   });
 
   it("los tres primeros meses tienen flujo negativo por la rampa de clientes", () => {

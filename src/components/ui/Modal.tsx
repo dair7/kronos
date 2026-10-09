@@ -14,8 +14,8 @@ interface PropsConfirmacion {
 
 /**
  * Dialogo de confirmacion para las acciones que borran datos
- * ("Caso Espitia" y "Nuevo caso"). Se cierra con Escape y devuelve el foco
- * al boton de confirmar al abrirse.
+ * ("Caso Espitia" y "Nuevo caso"). Se cierra con Escape y lleva el foco al
+ * boton de confirmar al abrirse.
  */
 export function ModalConfirmacion({
   abierto,
@@ -41,19 +41,19 @@ export function ModalConfirmacion({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-marino-950/50 p-4 sm:items-center sin-impresion"
+      className="sin-impresion fixed inset-0 z-[60] flex items-end justify-center bg-tinta/40 p-4 sm:items-center"
       onClick={onCancelar}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-label={titulo}
-        className="aparecer w-full max-w-md rounded-xl border border-borde bg-superficie p-5 shadow-xl"
+        className="aparecer w-full max-w-md rounded-tarjeta bg-tarjeta p-6 shadow-flotante"
         onClick={(evento) => evento.stopPropagation()}
       >
-        <h2 className="text-base font-semibold text-marino-900">{titulo}</h2>
-        <div className="mt-2 text-sm leading-relaxed text-marino-600">{children}</div>
-        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <h2 className="text-[17px] font-bold">{titulo}</h2>
+        <div className="mt-2 text-sm leading-relaxed text-tenue">{children}</div>
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Boton variante="secundario" onClick={onCancelar}>
             Cancelar
           </Boton>
