@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Material de trabajo que no se publica
+/referencia/
+/capturas/rediseno/
